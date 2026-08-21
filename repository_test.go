@@ -83,7 +83,7 @@ func TestSearchIDsAsMappingEntity(t *testing.T) {
 	}
 
 	repo := NewRepository[productCategory](newClient(srv.URL), "product_category")
-	pairs, err := SearchIDsAs[productCategory](context.Background(), repo, NewCriteria())
+	pairs, err := repo.SearchIDsAs[productCategory](context.Background(), NewCriteria())
 	require.NoError(t, err)
 
 	require.Len(t, pairs, 2)
@@ -110,7 +110,7 @@ func TestAggregateAsDecodesTyped(t *testing.T) {
 	}
 
 	repo := NewRepository[product](newClient(srv.URL), "product")
-	got, err := AggregateAs[aggs](context.Background(), repo,
+	got, err := repo.AggregateAs[aggs](context.Background(),
 		NewCriteria().AddAggregation(TermsAggregation("by_active", "active", nil, nil, nil)))
 	require.NoError(t, err)
 

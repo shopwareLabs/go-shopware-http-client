@@ -47,7 +47,8 @@ func (a AggregationResults) Decode(name string, target any) error {
 	return json.Unmarshal(raw, target)
 }
 
-func decodeAgg[R any](a AggregationResults, name string) (*R, error) {
+// decodeAgg unmarshals the named aggregation into R via Decode.
+func (a AggregationResults) decodeAgg[R any](name string) (*R, error) {
 	var result R
 	if err := a.Decode(name, &result); err != nil {
 		return nil, err
@@ -235,45 +236,45 @@ type DateHistogramResult struct {
 
 // GetAvg decodes the named aggregation as an avg result.
 func (a AggregationResults) GetAvg(name string) (*AvgResult, error) {
-	return decodeAgg[AvgResult](a, name)
+	return a.decodeAgg[AvgResult](name)
 }
 
 // GetSum decodes the named aggregation as a sum result.
 func (a AggregationResults) GetSum(name string) (*SumResult, error) {
-	return decodeAgg[SumResult](a, name)
+	return a.decodeAgg[SumResult](name)
 }
 
 // GetCount decodes the named aggregation as a count result.
 func (a AggregationResults) GetCount(name string) (*CountResult, error) {
-	return decodeAgg[CountResult](a, name)
+	return a.decodeAgg[CountResult](name)
 }
 
 // GetMin decodes the named aggregation as a min result.
 func (a AggregationResults) GetMin(name string) (*MinResult, error) {
-	return decodeAgg[MinResult](a, name)
+	return a.decodeAgg[MinResult](name)
 }
 
 // GetMax decodes the named aggregation as a max result.
 func (a AggregationResults) GetMax(name string) (*MaxResult, error) {
-	return decodeAgg[MaxResult](a, name)
+	return a.decodeAgg[MaxResult](name)
 }
 
 // GetStats decodes the named aggregation as a stats result.
 func (a AggregationResults) GetStats(name string) (*StatsResult, error) {
-	return decodeAgg[StatsResult](a, name)
+	return a.decodeAgg[StatsResult](name)
 }
 
 // GetTerms decodes the named aggregation as a terms result.
 func (a AggregationResults) GetTerms(name string) (*TermsResult, error) {
-	return decodeAgg[TermsResult](a, name)
+	return a.decodeAgg[TermsResult](name)
 }
 
 // GetDateHistogram decodes the named aggregation as a date histogram result.
 func (a AggregationResults) GetDateHistogram(name string) (*DateHistogramResult, error) {
-	return decodeAgg[DateHistogramResult](a, name)
+	return a.decodeAgg[DateHistogramResult](name)
 }
 
 // GetEntity decodes the named aggregation as an entity result.
 func (a AggregationResults) GetEntity(name string) (*EntityResult, error) {
-	return decodeAgg[EntityResult](a, name)
+	return a.decodeAgg[EntityResult](name)
 }

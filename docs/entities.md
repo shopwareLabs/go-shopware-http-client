@@ -46,13 +46,11 @@ type ProductCategory struct {
 }
 
 mapping := shopware.NewRepository[ProductCategory](client, "product_category")
-pairs, err := shopware.SearchIDsAs[ProductCategory](ctx, mapping, shopware.NewCriteria())
+pairs, err := mapping.SearchIDsAs[ProductCategory](ctx, shopware.NewCriteria())
 // pairs -> []ProductCategory
 ```
 
-> `SearchIDs` (the method) is shorthand for `SearchIDsAs[string]`. The generic
-> form is a free function rather than a method because Go methods cannot
-> introduce their own type parameters.
+`SearchIDs` is shorthand for `SearchIDsAs[string]`.
 
 ## Writing data (upsert / delete)
 

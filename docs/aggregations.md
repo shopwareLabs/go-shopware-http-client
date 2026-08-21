@@ -58,14 +58,13 @@ for _, b := range terms.Buckets {
 ## Custom shapes
 
 For a shape these structs don't cover, decode the whole payload yourself with
-the generic `AggregateAs[A]` (a free function, since the result type depends on
-the criteria, not the entity):
+the generic `AggregateAs[A]`:
 
 ```go
 type Aggs struct {
 	PerManufacturer shopware.TermsResult `json:"per_manufacturer"`
 }
-typed, err := shopware.AggregateAs[Aggs](ctx, products, c)
+typed, err := products.AggregateAs[Aggs](ctx, c)
 ```
 
 ## See also
