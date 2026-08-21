@@ -1,7 +1,8 @@
 package shopware
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"strconv"
 )
@@ -9,7 +10,7 @@ import (
 // This file models the JSON produced by Shopware's DAL aggregation result
 // classes (src/Core/Framework/DataAbstractionLayer/Search/AggregationResult) as
 // Go structs, so callers can decode aggregations into typed values instead of
-// poking at json.RawMessage.
+// poking at raw JSON.
 //
 // The top-level "aggregations" object is keyed by each aggregation's name, and
 // the value's shape depends on the aggregation type requested at the call site
@@ -20,7 +21,7 @@ import (
 // AggregationResults is the decoded "aggregations" object: a map from each
 // aggregation's name to its raw result. Decode a named entry with the Get*
 // helpers, or with Decode for a custom type.
-type AggregationResults map[string]json.RawMessage
+type AggregationResults map[string]jsontext.Value
 
 // Has reports whether an aggregation with the given name is present.
 func (a AggregationResults) Has(name string) bool {
@@ -60,7 +61,7 @@ func (a AggregationResults) decodeAgg[R any](name string) (*R, error) {
 // or a string (decimal columns come back as strings, e.g. "1.5400"), matching
 // the PHP `mixed`/`float|int|string|null` types on min/max.
 type Numeric struct {
-	raw json.RawMessage
+	raw jsontext.Value
 }
 
 // UnmarshalJSON stores the raw value for later, lossless interpretation.
@@ -154,8 +155,8 @@ type StatsResult struct {
 // EntityResult is the result of an entity aggregation. Entities holds the raw
 // entity payloads; decode them into your entity type.
 type EntityResult struct {
-	Name     string            `json:"name"`
-	Entities []json.RawMessage `json:"entities"`
+	Name     string           `json:"name"`
+	Entities []jsontext.Value `json:"entities"`
 }
 
 // --- Bucket results ------------------------------------------------------
@@ -170,7 +171,7 @@ type Bucket struct {
 
 	// Nested is the sub-aggregation result merged into the bucket under its
 	// own name. It is nil when the bucket has no nested aggregation.
-	Nested json.RawMessage `json:"-"`
+	Nested jsontext.Value `json:"-"`
 }
 
 // reservedBucketKeys are the fixed fields of a bucket; any other key is the
@@ -184,7 +185,7 @@ var reservedBucketKeys = map[string]bool{
 // UnmarshalJSON decodes the fixed bucket fields and captures any extra key as
 // the nested aggregation result.
 func (b *Bucket) UnmarshalJSON(data []byte) error {
-	var raw map[string]json.RawMessage
+	var raw map[string]jsontext.Value
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}

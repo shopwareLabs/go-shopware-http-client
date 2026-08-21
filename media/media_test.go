@@ -2,7 +2,7 @@ package media
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -43,7 +43,7 @@ func newManager(url string) *Manager {
 func decodeSync(t *testing.T, body io.Reader) []syncOp {
 	t.Helper()
 	var ops []syncOp
-	require.NoError(t, json.NewDecoder(body).Decode(&ops))
+	require.NoError(t, json.UnmarshalRead(body, &ops))
 	return ops
 }
 
@@ -121,7 +121,7 @@ func TestUploadByURL(t *testing.T) {
 		case r.URL.Path == "/api/_action/sync":
 			_, _ = w.Write([]byte(`{}`))
 		case strings.HasPrefix(r.URL.Path, "/api/_action/media/"):
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&uploadBody))
+			require.NoError(t, json.UnmarshalRead(r.Body, &uploadBody))
 			_, _ = w.Write([]byte(`{}`))
 		}
 	})

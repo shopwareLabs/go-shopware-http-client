@@ -1,7 +1,7 @@
 package extension
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 )
 
@@ -31,7 +31,7 @@ func (l List) FilterByUpdatable() List {
 }
 
 // Detail describes a single extension. Fields whose shape is not
-// stable across Shopware versions are kept as json.RawMessage; decode them
+// stable across Shopware versions are kept as jsontext.Value; decode them
 // yourself when needed.
 type Detail struct {
 	Name            string  `json:"name"`
@@ -55,9 +55,9 @@ type Detail struct {
 	UpdatedAt   *Date `json:"updatedAt"`
 
 	// Permissions, Images, Categories, etc. vary by version/source.
-	Permissions json.RawMessage `json:"permissions,omitempty"`
-	Images      json.RawMessage `json:"images,omitempty"`
-	Categories  json.RawMessage `json:"categories,omitempty"`
+	Permissions jsontext.Value `json:"permissions,omitempty"`
+	Images      jsontext.Value `json:"images,omitempty"`
+	Categories  jsontext.Value `json:"categories,omitempty"`
 }
 
 // Date is the PHP DateTime envelope Shopware serializes timestamps as.

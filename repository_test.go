@@ -2,7 +2,7 @@ package shopware
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"io"
 	"net/http"
 	"testing"
@@ -123,7 +123,7 @@ func TestRepositoryUpsertSendsSyncOperation(t *testing.T) {
 	var captured []SyncOperation
 	srv := newTestServer(t, nil, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/api/_action/sync", r.URL.Path)
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&captured))
+		require.NoError(t, json.UnmarshalRead(r.Body, &captured))
 		_, _ = w.Write([]byte(`{}`))
 	})
 	defer srv.Close()
@@ -141,7 +141,7 @@ func TestRepositoryUpsertSendsSyncOperation(t *testing.T) {
 func TestRepositoryDeleteByFilters(t *testing.T) {
 	var captured []SyncOperation
 	srv := newTestServer(t, nil, func(w http.ResponseWriter, r *http.Request) {
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&captured))
+		require.NoError(t, json.UnmarshalRead(r.Body, &captured))
 		_, _ = w.Write([]byte(`{}`))
 	})
 	defer srv.Close()

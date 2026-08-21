@@ -2,7 +2,7 @@ package shopware
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -23,7 +23,7 @@ func newTestServer(t *testing.T, tokenCount *atomic.Int32, handler http.HandlerF
 				tokenCount.Add(1)
 			}
 			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{
+			_ = json.MarshalWrite(w, map[string]any{
 				"access_token": "token-abc",
 				"token_type":   "Bearer",
 				"expires_in":   600,
