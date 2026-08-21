@@ -10,8 +10,7 @@ import (
 	"testing"
 
 	shopware "github.com/shyim/go-shopware-http-client"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/shyim/go-shopware-http-client/internal/assert"
 )
 
 // syncOp is the shape of a /_action/sync operation, used to inspect upserts and
@@ -43,7 +42,7 @@ func newManager(url string) *Manager {
 func decodeSync(t *testing.T, body io.Reader) []syncOp {
 	t.Helper()
 	var ops []syncOp
-	require.NoError(t, json.UnmarshalRead(body, &ops))
+	assert.NoError(t, json.UnmarshalRead(body, &ops))
 	return ops
 }
 
@@ -73,14 +72,14 @@ func TestUpload(t *testing.T) {
 	id, err := newManager(srv.URL).Upload(context.Background(),
 		strings.NewReader("PNGDATA"),
 		UploadOptions{FileName: "logo.png", ContentType: "image/png", Private: true})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Len(t, id, 32, "media id is a stripped uuid")
 
 	// The media entity was upserted first, carrying our id and private flag.
-	require.Len(t, syncOps, 1)
+	assert.Len(t, syncOps, 1)
 	assert.Equal(t, "media", syncOps[0].Entity)
 	assert.Equal(t, "upsert", syncOps[0].Action)
-	require.Len(t, syncOps[0].Payload, 1)
+	assert.Len(t, syncOps[0].Payload, 1)
 	assert.Equal(t, id, syncOps[0].Payload[0]["id"])
 	assert.Equal(t, true, syncOps[0].Payload[0]["private"])
 
@@ -108,7 +107,7 @@ func TestUploadRollsBackOnUploadFailure(t *testing.T) {
 
 	_, err := newManager(srv.URL).Upload(context.Background(),
 		strings.NewReader("x"), UploadOptions{FileName: "a.png"})
-	require.Error(t, err)
+	assert.Error(t, err)
 
 	// upsert (create) followed by delete (rollback).
 	assert.Equal(t, []string{"upsert", "delete"}, actions)
@@ -121,7 +120,7 @@ func TestUploadByURL(t *testing.T) {
 		case r.URL.Path == "/api/_action/sync":
 			_, _ = w.Write([]byte(`{}`))
 		case strings.HasPrefix(r.URL.Path, "/api/_action/media/"):
-			require.NoError(t, json.UnmarshalRead(r.Body, &uploadBody))
+			assert.NoError(t, json.UnmarshalRead(r.Body, &uploadBody))
 			_, _ = w.Write([]byte(`{}`))
 		}
 	})
@@ -131,7 +130,7 @@ func TestUploadByURL(t *testing.T) {
 		FileName: "image.jpg",
 		URL:      "https://example.com/image.jpg",
 	})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Len(t, id, 32)
 
 	assert.Equal(t, "image", uploadBody["fileName"])
@@ -163,7 +162,7 @@ func TestDefaultFolderByEntity(t *testing.T) {
 	defer srv.Close()
 
 	id, err := newManager(srv.URL).DefaultFolderByEntity(context.Background(), "product")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "folder-123", id)
 }
 
@@ -175,7 +174,7 @@ func TestFolderByNameNotFound(t *testing.T) {
 	defer srv.Close()
 
 	id, err := newManager(srv.URL).FolderByName(context.Background(), "Missing")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Empty(t, id)
 }
 
@@ -183,7 +182,7 @@ func TestCreateFolder(t *testing.T) {
 	var op syncOp
 	srv := testServer(t, func(w http.ResponseWriter, r *http.Request) {
 		ops := decodeSync(t, r.Body)
-		require.Len(t, ops, 1)
+		assert.Len(t, ops, 1)
 		op = ops[0]
 		_, _ = w.Write([]byte(`{}`))
 	})
@@ -191,7 +190,7 @@ func TestCreateFolder(t *testing.T) {
 
 	id, err := newManager(srv.URL).CreateFolder(context.Background(), "Products",
 		CreateFolderOptions{ParentID: "parent-1"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Len(t, id, 32)
 
 	assert.Equal(t, "media_folder", op.Entity)
@@ -209,6 +208,6 @@ func TestCreateFolderWithoutParentSendsNull(t *testing.T) {
 	defer srv.Close()
 
 	_, err := newManager(srv.URL).CreateFolder(context.Background(), "Root", CreateFolderOptions{})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Nil(t, op.Payload[0]["parentId"], "empty parent serializes as null")
 }

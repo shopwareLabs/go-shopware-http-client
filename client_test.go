@@ -9,8 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/shyim/go-shopware-http-client/internal/assert"
 )
 
 // newTestServer returns a server that issues tokens at /api/oauth/token and
@@ -51,7 +50,7 @@ func TestClientGetAuthenticatesAndSendsBearer(t *testing.T) {
 	})
 
 	resp, err := c.Get(context.Background(), "/_info/config")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.JSONEq(t, `{"ok":true}`, string(resp.Body))
 }
@@ -67,7 +66,7 @@ func TestClientCachesToken(t *testing.T) {
 
 	for range 3 {
 		_, err := c.Get(context.Background(), "/anything")
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}
 	assert.Equal(t, int32(1), tokens.Load(), "token should be fetched once and cached")
 }
@@ -86,7 +85,7 @@ func TestClientNoOpStorageRefetchesEachRequest(t *testing.T) {
 
 	for range 3 {
 		_, err := c.Get(context.Background(), "/anything")
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}
 	assert.Equal(t, int32(3), tokens.Load(), "NoOp storage forces a fresh token every request")
 }
@@ -100,7 +99,7 @@ func TestClientUsesPreSeededTokenFromStorage(t *testing.T) {
 	defer srv.Close()
 
 	storage := NewInMemoryTokenStorage()
-	require.NoError(t, storage.Set(context.Background(), "shop-key", "seeded", time.Now().Add(time.Hour)))
+	assert.NoError(t, storage.Set(context.Background(), "shop-key", "seeded", time.Now().Add(time.Hour)))
 
 	c := NewClient(Config{
 		BaseURL: srv.URL, ClientID: "id", ClientSecret: "secret",
@@ -109,7 +108,7 @@ func TestClientUsesPreSeededTokenFromStorage(t *testing.T) {
 	})
 
 	_, err := c.Get(context.Background(), "/anything")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, int32(0), tokens.Load(), "valid pre-seeded token avoids the token endpoint")
 }
 
@@ -128,7 +127,7 @@ func TestClientRetriesOnceOn401(t *testing.T) {
 	c := NewClient(Config{BaseURL: srv.URL, ClientID: "id", ClientSecret: "secret"})
 
 	resp, err := c.Get(context.Background(), "/anything")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, int32(2), calls.Load(), "request retried once after 401")
 	assert.Equal(t, int32(2), tokens.Load(), "token re-fetched after invalidation")
@@ -144,10 +143,10 @@ func TestClientReturnsAPIErrorWithDetail(t *testing.T) {
 	c := NewClient(Config{BaseURL: srv.URL, ClientID: "id", ClientSecret: "secret"})
 
 	_, err := c.Get(context.Background(), "/anything")
-	require.Error(t, err)
+	assert.Error(t, err)
 
 	var apiErr *APIError
-	require.ErrorAs(t, err, &apiErr)
+	assert.ErrorAs(t, err, &apiErr)
 	assert.Equal(t, http.StatusBadRequest, apiErr.StatusCode)
 	assert.Equal(t, "Invalid criteria", apiErr.Detail)
 	assert.Contains(t, apiErr.Error(), "Invalid criteria")
@@ -162,9 +161,9 @@ func TestClientTokenFailurePropagates(t *testing.T) {
 
 	c := NewClient(Config{BaseURL: srv.URL, ClientID: "id", ClientSecret: "bad"})
 	err := c.Authenticate(context.Background())
-	require.Error(t, err)
+	assert.Error(t, err)
 
 	var apiErr *APIError
-	require.ErrorAs(t, err, &apiErr)
+	assert.ErrorAs(t, err, &apiErr)
 	assert.Equal(t, http.StatusUnauthorized, apiErr.StatusCode)
 }

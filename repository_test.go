@@ -7,8 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/shyim/go-shopware-http-client/internal/assert"
 )
 
 type product struct {
@@ -31,12 +30,12 @@ func TestRepositorySearch(t *testing.T) {
 	res, err := repo.Search(context.Background(),
 		NewCriteria().SetLimit(1).AddFilter(Equals("active", true)),
 		WithLanguage("en-id"))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	assert.Equal(t, "/api/search/product", path)
 	assert.Contains(t, body, `"active"`)
 	assert.Equal(t, 1, res.Total)
-	require.Len(t, res.Data, 1)
+	assert.Len(t, res.Data, 1)
 	assert.Equal(t, "Shirt", res.First().Name)
 }
 
@@ -50,7 +49,7 @@ func TestRepositorySearchRouteDashCases(t *testing.T) {
 
 	repo := NewRepository[product](newClient(srv.URL), "sales_channel")
 	_, err := repo.Search(context.Background(), NewCriteria())
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "/api/search/sales-channel", path)
 }
 
@@ -63,7 +62,7 @@ func TestRepositorySearchIDs(t *testing.T) {
 
 	repo := NewRepository[product](newClient(srv.URL), "product")
 	ids, err := repo.SearchIDs(context.Background(), NewCriteria())
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, []string{"p1", "p2"}, ids)
 }
 
@@ -84,9 +83,9 @@ func TestSearchIDsAsMappingEntity(t *testing.T) {
 
 	repo := NewRepository[productCategory](newClient(srv.URL), "product_category")
 	pairs, err := repo.SearchIDsAs[productCategory](context.Background(), NewCriteria())
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	require.Len(t, pairs, 2)
+	assert.Len(t, pairs, 2)
 	assert.Equal(t, "p1", pairs[0].ProductID)
 	assert.Equal(t, "c1", pairs[0].CategoryID)
 }
@@ -112,9 +111,9 @@ func TestAggregateAsDecodesTyped(t *testing.T) {
 	repo := NewRepository[product](newClient(srv.URL), "product")
 	got, err := repo.AggregateAs[aggs](context.Background(),
 		NewCriteria().AddAggregation(TermsAggregation("by_active", "active", nil, nil, nil)))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	require.Len(t, got.ByActive.Buckets, 1)
+	assert.Len(t, got.ByActive.Buckets, 1)
 	assert.Equal(t, "1", got.ByActive.Buckets[0].Key)
 	assert.Equal(t, 1565, got.ByActive.Buckets[0].Count)
 }
@@ -123,37 +122,37 @@ func TestRepositoryUpsertSendsSyncOperation(t *testing.T) {
 	var captured []SyncOperation
 	srv := newTestServer(t, nil, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/api/_action/sync", r.URL.Path)
-		require.NoError(t, json.UnmarshalRead(r.Body, &captured))
+		assert.NoError(t, json.UnmarshalRead(r.Body, &captured))
 		_, _ = w.Write([]byte(`{}`))
 	})
 	defer srv.Close()
 
 	repo := NewRepository[product](newClient(srv.URL), "product")
 	err := repo.Upsert(context.Background(), []product{{ID: "p1", Name: "Shirt"}})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	require.Len(t, captured, 1)
+	assert.Len(t, captured, 1)
 	assert.Equal(t, "upsert", captured[0].Action)
 	assert.Equal(t, "product", captured[0].Entity)
-	require.Len(t, captured[0].Payload, 1)
+	assert.Len(t, captured[0].Payload, 1)
 }
 
 func TestRepositoryDeleteByFilters(t *testing.T) {
 	var captured []SyncOperation
 	srv := newTestServer(t, nil, func(w http.ResponseWriter, r *http.Request) {
-		require.NoError(t, json.UnmarshalRead(r.Body, &captured))
+		assert.NoError(t, json.UnmarshalRead(r.Body, &captured))
 		_, _ = w.Write([]byte(`{}`))
 	})
 	defer srv.Close()
 
 	repo := NewRepository[product](newClient(srv.URL), "product")
 	err := repo.DeleteByFilters(context.Background(), []Filter{Equals("active", false)})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	require.Len(t, captured, 1)
+	assert.Len(t, captured, 1)
 	assert.Equal(t, "delete", captured[0].Action)
 	assert.Empty(t, captured[0].Payload)
-	require.Len(t, captured[0].Criteria, 1)
+	assert.Len(t, captured[0].Criteria, 1)
 }
 
 func TestRequestOptionsResolveHeaders(t *testing.T) {
