@@ -3,8 +3,7 @@ package shopware
 import (
 	"context"
 	"strings"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 // Well-known default IDs used throughout Shopware.
@@ -17,10 +16,10 @@ const (
 	DefaultSalesChannelTypeProductExport = "ed535e5722134ac1aa6524f73e26881b"
 )
 
-// UUID returns a new Shopware-style UUID: a random UUIDv4 with the dashes
+// UUID returns a new Shopware-style UUID: a random UUID with the dashes
 // stripped.
 func UUID() string {
-	return strings.ReplaceAll(uuid.NewString(), "-", "")
+	return strings.ReplaceAll(uuid.New().String(), "-", "")
 }
 
 // RequestOption configures the DAL context (language, version, inheritance,
