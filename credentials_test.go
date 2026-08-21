@@ -2,14 +2,13 @@ package shopware
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/shyim/go-shopware-http-client/internal/assert"
 )
 
 // captureTokenBody returns a server that records the JSON body sent to the
@@ -20,7 +19,7 @@ func captureTokenBody(t *testing.T, captured *map[string]string) *httptest.Serve
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/oauth/token" {
 			body, _ := io.ReadAll(r.Body)
-			require.NoError(t, json.Unmarshal(body, captured))
+			assert.NoError(t, json.Unmarshal(body, captured))
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":600}`))
 			return
@@ -38,7 +37,7 @@ func TestIntegrationCredentialsGrant(t *testing.T) {
 		BaseURL:     srv.URL,
 		Credentials: NewIntegrationCredentials("my-id", "my-secret"),
 	})
-	require.NoError(t, c.Authenticate(context.Background()))
+	assert.NoError(t, c.Authenticate(context.Background()))
 
 	assert.Equal(t, map[string]string{
 		"grant_type":    "client_credentials",
@@ -56,7 +55,7 @@ func TestPasswordCredentialsGrant(t *testing.T) {
 		BaseURL:     srv.URL,
 		Credentials: NewPasswordCredentials("admin", "shopware"),
 	})
-	require.NoError(t, c.Authenticate(context.Background()))
+	assert.NoError(t, c.Authenticate(context.Background()))
 
 	assert.Equal(t, map[string]string{
 		"grant_type": "password",
@@ -74,7 +73,7 @@ func TestConfigFallsBackToClientIDSecret(t *testing.T) {
 
 	// No Credentials set: ClientID/ClientSecret must be used as integration creds.
 	c := NewClient(Config{BaseURL: srv.URL, ClientID: "legacy-id", ClientSecret: "legacy-secret"})
-	require.NoError(t, c.Authenticate(context.Background()))
+	assert.NoError(t, c.Authenticate(context.Background()))
 
 	assert.Equal(t, "client_credentials", captured["grant_type"])
 	assert.Equal(t, "legacy-id", captured["client_id"])

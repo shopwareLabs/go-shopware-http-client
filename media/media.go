@@ -216,11 +216,11 @@ func (m *Manager) CreateFolder(ctx context.Context, name string, opts CreateFold
 // splitFileName splits "logo.png" into ("logo", "png"). The extension is
 // required and lower-cased; a dotted base name ("a.b.png") keeps its dots.
 func splitFileName(fileName string) (baseName, extension string, err error) {
-	idx := strings.LastIndex(fileName, ".")
-	if idx <= 0 || idx == len(fileName)-1 {
+	base, ext, found := strings.CutLast(fileName, ".")
+	if !found || base == "" || ext == "" {
 		return "", "", fmt.Errorf("invalid file name %q: expected a name and an extension", fileName)
 	}
-	return fileName[:idx], strings.ToLower(fileName[idx+1:]), nil
+	return base, strings.ToLower(ext), nil
 }
 
 // nullable returns nil for an empty string so the JSON field serializes as null

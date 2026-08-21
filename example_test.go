@@ -80,7 +80,7 @@ func ExampleEntityRepository_Upsert() {
 	})
 }
 
-func ExampleSearchIDsAs() {
+func ExampleEntityRepository_SearchIDsAs() {
 	ctx := context.Background()
 	client := shopware.NewClient(shopware.Config{BaseURL: "https://x", ClientID: "i", ClientSecret: "s"})
 
@@ -90,7 +90,7 @@ func ExampleSearchIDsAs() {
 	}
 	mapping := shopware.NewRepository[productCategory](client, "product_category")
 
-	pairs, err := shopware.SearchIDsAs[productCategory](ctx, mapping, shopware.NewCriteria())
+	pairs, err := mapping.SearchIDsAs[productCategory](ctx, shopware.NewCriteria())
 	if err != nil {
 		return
 	}
@@ -119,7 +119,7 @@ func ExampleEntityRepository_Aggregate() {
 	fmt.Println(stats.Min.String(), stats.Avg)
 }
 
-func ExampleAggregateAs() {
+func ExampleEntityRepository_AggregateAs() {
 	ctx := context.Background()
 	client := shopware.NewClient(shopware.Config{BaseURL: "https://x", ClientID: "i", ClientSecret: "s"})
 	products := shopware.NewRepository[exampleProduct](client, "product")
@@ -128,7 +128,7 @@ func ExampleAggregateAs() {
 		ByActive shopware.TermsResult `json:"by_active"`
 	}
 
-	got, err := shopware.AggregateAs[aggs](ctx, products,
+	got, err := products.AggregateAs[aggs](ctx,
 		shopware.NewCriteria().AddAggregation(shopware.TermsAggregation("by_active", "active", nil, nil, nil)))
 	if err != nil {
 		return

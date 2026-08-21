@@ -2,7 +2,7 @@ package extension
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -12,8 +12,7 @@ import (
 	"testing"
 
 	shopware "github.com/shyim/go-shopware-http-client"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/shyim/go-shopware-http-client/internal/assert"
 )
 
 // testServer issues tokens and serves /_info/config with the given version,
@@ -49,16 +48,16 @@ func TestListAvailable(t *testing.T) {
 	defer srv.Close()
 
 	list, err := newManager(srv.URL).ListAvailable(context.Background())
-	require.NoError(t, err)
-	require.Len(t, list, 2)
+	assert.NoError(t, err)
+	assert.Len(t, list, 2)
 
 	a := list.GetByName("SwagA")
-	require.NotNil(t, a)
+	assert.NotNil(t, a)
 	assert.True(t, a.IsPlugin())
 	assert.True(t, a.IsUpdatable())
 
 	updatable := list.FilterByUpdatable()
-	require.Len(t, updatable, 1)
+	assert.Len(t, updatable, 1)
 	assert.Equal(t, "SwagA", updatable[0].Name)
 }
 
@@ -87,7 +86,7 @@ func TestLifecycleMethodsAndPaths(t *testing.T) {
 			})
 			defer srv.Close()
 
-			require.NoError(t, tc.call(newManager(srv.URL)))
+			assert.NoError(t, tc.call(newManager(srv.URL)))
 			assert.Equal(t, tc.wantMethod, gotMethod)
 			assert.Equal(t, tc.wantPath, gotPath)
 		})
@@ -114,7 +113,7 @@ func TestRemoveVersionGate(t *testing.T) {
 			})
 			defer srv.Close()
 
-			require.NoError(t, newManager(srv.URL).Remove(context.Background(), "plugin", "Foo"))
+			assert.NoError(t, newManager(srv.URL).Remove(context.Background(), "plugin", "Foo"))
 			assert.Equal(t, tc.wantMethod, gotMethod)
 		})
 	}
@@ -128,7 +127,7 @@ func TestUploadMultipart(t *testing.T) {
 		gotContentType = r.Header.Get("Content-Type")
 
 		_, params, err := mime.ParseMediaType(gotContentType)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		mr := multipartReader(t, r.Body, params["boundary"])
 		gotFile = mr
 		_, _ = w.Write([]byte(`{}`))
@@ -136,7 +135,7 @@ func TestUploadMultipart(t *testing.T) {
 	defer srv.Close()
 
 	err := newManager(srv.URL).Upload(context.Background(), strings.NewReader("ZIPDATA"))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	assert.Equal(t, "/api/_action/extension/upload", gotPath)
 	assert.True(t, strings.HasPrefix(gotContentType, "multipart/form-data"))
@@ -148,14 +147,14 @@ func TestUploadUpdateToCloudIncludesMediaField(t *testing.T) {
 	var file string
 	srv := testServer(t, "6.7.0.0", func(w http.ResponseWriter, r *http.Request) {
 		_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		fields, file = multipartAll(t, r.Body, params["boundary"])
 		_, _ = w.Write([]byte(`{}`))
 	})
 	defer srv.Close()
 
 	err := newManager(srv.URL).UploadUpdateToCloud(context.Background(), "SwagFoo", strings.NewReader("ZIP"))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "SwagFoo", fields["media"])
 	assert.Equal(t, "ZIP", file)
 }
@@ -164,9 +163,9 @@ func TestDetailStatusAndDate(t *testing.T) {
 	raw := `{"name":"X","version":"1.0.0","latestVersion":"1.2.0","active":true,
 		"installedAt":{"date":"2026-01-01 00:00:00.000000","timezone_type":3,"timezone":"UTC"}}`
 	var d Detail
-	require.NoError(t, json.Unmarshal([]byte(raw), &d))
+	assert.NoError(t, json.Unmarshal([]byte(raw), &d))
 
-	require.NotNil(t, d.InstalledAt)
+	assert.NotNil(t, d.InstalledAt)
 	assert.Equal(t, "UTC", d.InstalledAt.Timezone)
 	assert.Contains(t, d.Status(), "update available to 1.2.0")
 }
@@ -194,9 +193,9 @@ func multipartAll(t *testing.T, body io.Reader, boundary string) (map[string]str
 		if err == io.EOF {
 			break
 		}
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		data, err := io.ReadAll(part)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		if part.FormName() == "file" {
 			file = string(data)
 		} else {

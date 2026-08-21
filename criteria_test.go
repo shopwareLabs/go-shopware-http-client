@@ -1,11 +1,10 @@
 package shopware
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/shyim/go-shopware-http-client/internal/assert"
 )
 
 func TestCriteriaToPayloadEmpty(t *testing.T) {
@@ -53,8 +52,8 @@ func TestCriteriaNestedAssociations(t *testing.T) {
 
 	payload := c.ToPayload()
 	assocs := payload["associations"].(map[string]any)
-	require.Contains(t, assocs, "manufacturer")
-	require.Contains(t, assocs, "categories")
+	assert.Contains(t, assocs, "manufacturer")
+	assert.Contains(t, assocs, "categories")
 
 	manufacturer := assocs["manufacturer"].(map[string]any)
 	media := manufacturer["associations"].(map[string]any)["media"].(map[string]any)
@@ -65,13 +64,13 @@ func TestCriteriaMarshalsAsPayload(t *testing.T) {
 	c := NewCriteria().SetLimit(1).AddFilter(Equals("id", "x"))
 
 	out, err := json.Marshal(c)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	var decoded map[string]any
-	require.NoError(t, json.Unmarshal(out, &decoded))
-	assert.EqualValues(t, 1, decoded["limit"])
+	assert.NoError(t, json.Unmarshal(out, &decoded))
+	assert.Equal(t, float64(1), decoded["limit"])
 	filters := decoded["filter"].([]any)
-	require.Len(t, filters, 1)
+	assert.Len(t, filters, 1)
 	assert.Equal(t, "equals", filters[0].(map[string]any)["type"])
 }
 

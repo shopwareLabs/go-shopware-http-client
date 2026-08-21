@@ -1,6 +1,6 @@
 package shopware
 
-import "encoding/json"
+import "encoding/json/v2"
 
 // TotalCountMode controls how the total count of a search result is computed.
 type TotalCountMode int

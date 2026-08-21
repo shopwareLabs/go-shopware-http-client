@@ -3,8 +3,7 @@ package shopware
 import (
 	"context"
 	"strings"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 // Well-known default IDs used throughout Shopware.
@@ -17,10 +16,10 @@ const (
 	DefaultSalesChannelTypeProductExport = "ed535e5722134ac1aa6524f73e26881b"
 )
 
-// UUID returns a new Shopware-style UUID: a random UUIDv4 with the dashes
+// UUID returns a new Shopware-style UUID: a random UUID with the dashes
 // stripped.
 func UUID() string {
-	return strings.ReplaceAll(uuid.NewString(), "-", "")
+	return strings.ReplaceAll(uuid.New().String(), "-", "")
 }
 
 // RequestOption configures the DAL context (language, version, inheritance,
@@ -146,10 +145,10 @@ func (r *EntityRepository[T]) Search(ctx context.Context, criteria *Criteria, op
 // This is the convenience form for entities with a single-column primary key
 // (the common case), where /search-ids returns a flat list of id strings. For
 // mapping entities (m:n join tables such as product_category), whose primary
-// key is composite, /search-ids returns objects instead — use the generic
-// SearchIDsAs to decode those into a struct.
+// key is composite, /search-ids returns objects instead — decode those into a
+// struct with SearchIDsAs.
 func (r *EntityRepository[T]) SearchIDs(ctx context.Context, criteria *Criteria, opts ...RequestOption) ([]string, error) {
-	return SearchIDsAs[string](ctx, r, criteria, opts...)
+	return r.SearchIDsAs[string](ctx, criteria, opts...)
 }
 
 // SearchIDsAs executes the criteria and returns the matching primary keys
@@ -160,12 +159,11 @@ func (r *EntityRepository[T]) SearchIDs(ctx context.Context, criteria *Criteria,
 //		ProductID  string `json:"productId"`
 //		CategoryID string `json:"categoryId"`
 //	}
-//	pairs, err := SearchIDsAs[ProductCategory](ctx, repo, criteria)
+//	pairs, err := mapping.SearchIDsAs[ProductCategory](ctx, criteria)
 //
-// For single-column keys, ID is string and the repository method SearchIDs is
-// the shorter spelling.
-func SearchIDsAs[ID any, T any](ctx context.Context, repo *EntityRepository[T], criteria *Criteria, opts ...RequestOption) ([]ID, error) {
-	resp, err := repo.client.Request(ctx, "POST", "/search-ids/"+repo.route(), criteria.ToPayload(), resolveHeaders(opts))
+// For single-column keys, ID is string and SearchIDs is the shorter spelling.
+func (r *EntityRepository[T]) SearchIDsAs[ID any](ctx context.Context, criteria *Criteria, opts ...RequestOption) ([]ID, error) {
+	resp, err := r.client.Request(ctx, "POST", "/search-ids/"+r.route(), criteria.ToPayload(), resolveHeaders(opts))
 	if err != nil {
 		return nil, err
 	}
@@ -202,8 +200,8 @@ func (r *EntityRepository[T]) Aggregate(ctx context.Context, criteria *Criteria,
 
 // AggregateAs executes the criteria for its aggregations only and decodes the
 // aggregation payload into A. The shape of A depends on the aggregations added
-// to the criteria, not on the entity, which is why this is a free function
-// rather than a method (a method cannot introduce its own type parameter):
+// to the criteria, not on the entity, so the type parameter lives on the method
+// instead of the repository:
 //
 //	type Aggs struct {
 //		ByActive struct {
@@ -213,10 +211,10 @@ func (r *EntityRepository[T]) Aggregate(ctx context.Context, criteria *Criteria,
 //			} `json:"buckets"`
 //		} `json:"by_active"`
 //	}
-//	aggs, err := AggregateAs[Aggs](ctx, repo, criteria)
-func AggregateAs[A any, T any](ctx context.Context, repo *EntityRepository[T], criteria *Criteria, opts ...RequestOption) (*A, error) {
+//	aggs, err := products.AggregateAs[Aggs](ctx, criteria)
+func (r *EntityRepository[T]) AggregateAs[A any](ctx context.Context, criteria *Criteria, opts ...RequestOption) (*A, error) {
 	criteria.SetLimit(1)
-	resp, err := repo.client.Request(ctx, "POST", "/search/"+repo.route(), criteria.ToPayload(), resolveHeaders(opts))
+	resp, err := r.client.Request(ctx, "POST", "/search/"+r.route(), criteria.ToPayload(), resolveHeaders(opts))
 	if err != nil {
 		return nil, err
 	}

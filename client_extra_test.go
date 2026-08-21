@@ -8,8 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/shyim/go-shopware-http-client/internal/assert"
 )
 
 func TestVersionFetchesOnceAndCaches(t *testing.T) {
@@ -28,7 +27,7 @@ func TestVersionFetchesOnceAndCaches(t *testing.T) {
 
 	for range 3 {
 		v, err := c.Version(context.Background())
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, "6.7.1.0", v)
 	}
 	assert.Equal(t, int32(1), configCalls.Load(), "version is fetched once and cached")
@@ -49,7 +48,7 @@ func TestRequestRawSendsBodyVerbatim(t *testing.T) {
 	_, err := c.RequestRaw(context.Background(), "POST", "/custom",
 		func() (io.Reader, error) { return strings.NewReader("raw-payload"), nil },
 		map[string]string{"Content-Type": "application/octet-stream"})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	assert.Equal(t, "raw-payload", gotBody)
 	assert.Equal(t, "application/octet-stream", gotContentType)
@@ -73,9 +72,9 @@ func TestRequestRawRebuildsBodyOn401(t *testing.T) {
 
 	_, err := c.RequestRaw(context.Background(), "POST", "/custom",
 		func() (io.Reader, error) { return strings.NewReader("payload"), nil }, nil)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	require.Len(t, bodies, 2, "request retried once after 401")
+	assert.Len(t, bodies, 2, "request retried once after 401")
 	assert.Equal(t, "payload", bodies[0])
 	assert.Equal(t, "payload", bodies[1], "body factory rebuilt the body for the retry")
 }

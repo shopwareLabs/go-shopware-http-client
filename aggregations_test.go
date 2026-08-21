@@ -2,12 +2,11 @@ package shopware
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/shyim/go-shopware-http-client/internal/assert"
 )
 
 // aggregationsFromJSON decodes a raw aggregations object as the repository
@@ -15,7 +14,7 @@ import (
 func aggregationsFromJSON(t *testing.T, raw string) AggregationResults {
 	t.Helper()
 	var a AggregationResults
-	require.NoError(t, json.Unmarshal([]byte(raw), &a))
+	assert.NoError(t, json.Unmarshal([]byte(raw), &a))
 	return a
 }
 
@@ -31,38 +30,38 @@ func TestAggregationMetricResults(t *testing.T) {
 	}`)
 
 	avg, err := a.GetAvg("a")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.InDelta(t, 81.1904, avg.Avg, 1e-6)
 
 	sum, err := a.GetSum("sm")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.InDelta(t, 127063.0, sum.Sum, 1e-6)
 
 	count, err := a.GetCount("c")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 1565, count.Count)
 
 	// min came back as a decimal string -> Numeric handles both forms.
 	minResult, err := a.GetMin("mn")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "1.5400", minResult.Min.String())
 	f, err := minResult.Min.Float()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.InDelta(t, 1.54, f, 1e-6)
 
 	// max came back as a bare number here.
 	maxResult, err := a.GetMax("mx")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	mf, err := maxResult.Max.Float()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.InDelta(t, 88888, mf, 1e-6)
 
 	stats, err := a.GetStats("s")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "1.5400", stats.Min.String())
-	require.NotNil(t, stats.Avg)
+	assert.NotNil(t, stats.Avg)
 	assert.InDelta(t, 495.95, *stats.Avg, 1e-6)
-	require.NotNil(t, stats.Sum)
+	assert.NotNil(t, stats.Sum)
 	assert.InDelta(t, 776174.07, *stats.Sum, 1e-6)
 }
 
@@ -76,15 +75,15 @@ func TestAggregationTermsWithNested(t *testing.T) {
 	}`)
 
 	terms, err := a.GetTerms("t")
-	require.NoError(t, err)
-	require.Len(t, terms.Buckets, 1)
+	assert.NoError(t, err)
+	assert.Len(t, terms.Buckets, 1)
 
 	b := terms.Buckets[0]
 	assert.Equal(t, "1", b.Key)
 	assert.Equal(t, 1565, b.Count)
 
 	var nested AvgResult
-	require.NoError(t, b.NestedAs(&nested))
+	assert.NoError(t, b.NestedAs(&nested))
 	assert.Equal(t, "avg_stock", nested.Name)
 	assert.InDelta(t, 81.1904, nested.Avg, 1e-6)
 }
@@ -97,8 +96,8 @@ func TestAggregationDateHistogram(t *testing.T) {
 	}`)
 
 	hist, err := a.GetDateHistogram("h")
-	require.NoError(t, err)
-	require.Len(t, hist.Buckets, 1)
+	assert.NoError(t, err)
+	assert.Len(t, hist.Buckets, 1)
 	assert.Equal(t, "2026-06-01 00:00:00", hist.Buckets[0].Key)
 	assert.Equal(t, 1565, hist.Buckets[0].Count)
 	assert.Empty(t, hist.Buckets[0].Nested)
@@ -126,10 +125,10 @@ func TestRepositoryAggregateReturnsTyped(t *testing.T) {
 	repo := NewRepository[product](newClient(srv.URL), "product")
 	aggs, err := repo.Aggregate(context.Background(),
 		NewCriteria().AddAggregation(TermsAggregation("by_active", "active", nil, nil, nil)))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	terms, err := aggs.GetTerms("by_active")
-	require.NoError(t, err)
-	require.Len(t, terms.Buckets, 1)
+	assert.NoError(t, err)
+	assert.Len(t, terms.Buckets, 1)
 	assert.Equal(t, "1", terms.Buckets[0].Key)
 }
