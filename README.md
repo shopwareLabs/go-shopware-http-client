@@ -59,7 +59,7 @@ and refreshes it transparently — you never manage tokens by hand.
 
 Full guides live in [`docs/`](./docs/README.md):
 
-- [Authentication](./docs/authentication.md) — integration, admin user (username/password), custom grants.
+- [Authentication](./docs/authentication.md) — integration, admin user (username/password), PKCE (browser login), custom grants.
 - [Raw requests](./docs/raw-requests.md) — the HTTP verbs and `Response`.
 - [Entities & repositories](./docs/entities.md) — typed search, ids, mapping entities, sync, DAL context.
 - [Criteria builder](./docs/criteria.md) — filters, sorting, associations, includes.
@@ -72,3 +72,4 @@ Full guides live in [`docs/`](./docs/README.md):
 - [Concurrency](./docs/concurrency.md) — safe concurrent use.
 
 Runnable, compile-checked snippets are in [`example_test.go`](./example_test.go).
+A full PKCE browser-login CLI demo lives in [`examples/pkce-cli`](./examples/pkce-cli/).

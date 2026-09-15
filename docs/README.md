@@ -2,7 +2,7 @@
 
 [← Package README](../README.md)
 
-- [Authentication](./authentication.md) — integration, admin user, custom grants.
+- [Authentication](./authentication.md) — integration, admin user, PKCE (browser login), custom grants.
 - [Raw requests](./raw-requests.md) — the HTTP verbs and `Response`.
 - [Entities & repositories](./entities.md) — typed search, ids, sync, DAL context.
 - [Criteria builder](./criteria.md) — filters, sorting, associations, includes.

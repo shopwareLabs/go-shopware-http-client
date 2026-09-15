@@ -109,9 +109,10 @@ type Client struct {
 }
 
 type tokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int    `json:"expires_in"`
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 // Response represents a response from the Shopware API.
@@ -213,6 +214,13 @@ func (c *Client) Version(ctx context.Context) (string, error) {
 	return v.(string), nil
 }
 
+// SetAccessToken seeds the token cache with a pre-obtained access token and
+// its expiry. Use it after an interactive PKCE login (via the pkce
+// sub-package) to avoid an immediate refresh_token round-trip.
+func (c *Client) SetAccessToken(ctx context.Context, token string, expiry time.Time) error {
+	return c.tokenStorage.Set(ctx, c.tokenKey, token, expiry)
+}
+
 // cachedAccessToken returns a still-valid cached token, or "" if none. A token
 // is treated as expired once it falls within tokenExpiryMargin of its real
 // expiry, so it is never used in the window where the server might already
@@ -296,6 +304,14 @@ func (c *Client) fetchToken(ctx context.Context) (string, error) {
 	expiry := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 	if err := c.tokenStorage.Set(ctx, c.tokenKey, tokenResp.AccessToken, expiry); err != nil {
 		return "", fmt.Errorf("store token: %w", err)
+	}
+
+	// If the server returned a rotated refresh_token and our credentials
+	// support it, persist the new value so subsequent refreshes work.
+	if tokenResp.RefreshToken != "" {
+		if updater, ok := c.credentials.(refreshTokenUpdater); ok {
+			updater.setRefreshToken(tokenResp.RefreshToken)
+		}
 	}
 
 	return tokenResp.AccessToken, nil
