@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	shopware "github.com/shyim/go-shopware-http-client"
-	"github.com/shyim/go-shopware-http-client/internal/assert"
+	shopware "github.com/shopwareLabs/go-shopware-http-client"
+	"github.com/shopwareLabs/go-shopware-http-client/internal/assert"
 )
 
 // syncOp is the shape of a /_action/sync operation, used to inspect upserts and

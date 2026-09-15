@@ -14,7 +14,7 @@ import (
 	"net/url"
 	"strings"
 
-	shopware "github.com/shyim/go-shopware-http-client"
+	shopware "github.com/shopwareLabs/go-shopware-http-client"
 )
 
 // Manager performs media operations against a shop.

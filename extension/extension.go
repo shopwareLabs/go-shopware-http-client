@@ -16,7 +16,7 @@ import (
 	"mime/multipart"
 	"net/textproto"
 
-	shopware "github.com/shyim/go-shopware-http-client"
+	shopware "github.com/shopwareLabs/go-shopware-http-client"
 	"github.com/shyim/go-version"
 )
 

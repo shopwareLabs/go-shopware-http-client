@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/shyim/go-shopware-http-client/internal/assert"
+	"github.com/shopwareLabs/go-shopware-http-client/internal/assert"
 )
 
 func TestVersionFetchesOnceAndCaches(t *testing.T) {

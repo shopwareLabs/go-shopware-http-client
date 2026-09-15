@@ -10,8 +10,8 @@ in when you import `extension`.
 
 ```go
 import (
-	shopware "github.com/shyim/go-shopware-http-client"
-	"github.com/shyim/go-shopware-http-client/extension"
+	shopware "github.com/shopwareLabs/go-shopware-http-client"
+	"github.com/shopwareLabs/go-shopware-http-client/extension"
 )
 
 client := shopware.NewClient(shopware.Config{

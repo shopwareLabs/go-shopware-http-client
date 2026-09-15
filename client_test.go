@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shyim/go-shopware-http-client/internal/assert"
+	"github.com/shopwareLabs/go-shopware-http-client/internal/assert"
 )
 
 // newTestServer returns a server that issues tokens at /api/oauth/token and

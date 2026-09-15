@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shyim/go-shopware-http-client"
+	"github.com/shopwareLabs/go-shopware-http-client"
 )
 
 type exampleProduct struct {

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/shyim/go-shopware-http-client/internal/assert"
+	"github.com/shopwareLabs/go-shopware-http-client/internal/assert"
 )
 
 type product struct {

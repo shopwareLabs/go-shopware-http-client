@@ -4,7 +4,7 @@ import (
 	"encoding/json/v2"
 	"testing"
 
-	"github.com/shyim/go-shopware-http-client/internal/assert"
+	"github.com/shopwareLabs/go-shopware-http-client/internal/assert"
 )
 
 func TestCriteriaToPayloadEmpty(t *testing.T) {

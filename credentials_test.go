@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shyim/go-shopware-http-client/internal/assert"
+	"github.com/shopwareLabs/go-shopware-http-client/internal/assert"
 )
 
 // captureTokenBody returns a server that records the JSON body sent to the

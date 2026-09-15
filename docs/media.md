@@ -8,8 +8,8 @@ and resolving/creating media folders. It is built from the same
 
 ```go
 import (
-	shopware "github.com/shyim/go-shopware-http-client"
-	"github.com/shyim/go-shopware-http-client/media"
+	shopware "github.com/shopwareLabs/go-shopware-http-client"
+	"github.com/shopwareLabs/go-shopware-http-client/media"
 )
 
 mgr := media.NewManager(client)

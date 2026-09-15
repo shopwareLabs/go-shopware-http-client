@@ -1,4 +1,4 @@
-module github.com/shyim/go-shopware-http-client
+module github.com/shopwareLabs/go-shopware-http-client
 
 go 1.27.0
 
