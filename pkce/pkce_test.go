@@ -125,7 +125,7 @@ func TestExchangeRequestShape(t *testing.T) {
 			_, _ = w.Write([]byte(`{"access_token":"at","refresh_token":"rt","expires_in":3600}`))
 			return
 		}
-		http.Error(w, "not found", 404)
+		http.Error(w, "not found", http.StatusNotFound)
 	}))
 	defer tokenSrv.Close()
 
@@ -159,7 +159,7 @@ func TestExchangeRequestShape(t *testing.T) {
 }
 
 func TestExchangeResponse(t *testing.T) {
-	tokenSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	tokenSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"access_token":"tok","refresh_token":"ref","expires_in":1800}`))
 	}))
@@ -188,8 +188,8 @@ func TestExchangeResponse(t *testing.T) {
 }
 
 func TestExchangeError(t *testing.T) {
-	tokenSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "invalid grant", 400)
+	tokenSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "invalid grant", http.StatusBadRequest)
 	}))
 	defer tokenSrv.Close()
 
@@ -224,7 +224,7 @@ func TestLoginCallbackSuccess(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"access_token":"at","refresh_token":"rt","expires_in":3600}`))
 		default:
-			http.Error(w, "not found", 404)
+			http.Error(w, "not found", http.StatusNotFound)
 		}
 	}))
 	defer shopSrv.Close()
@@ -296,7 +296,7 @@ func TestLoginCallbackSuccess(t *testing.T) {
 }
 
 func TestLoginCallbackError(t *testing.T) {
-	shopSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	shopSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer shopSrv.Close()
@@ -334,7 +334,7 @@ func TestLoginCallbackError(t *testing.T) {
 }
 
 func TestLoginStateMismatch(t *testing.T) {
-	shopSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	shopSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer shopSrv.Close()
@@ -371,7 +371,7 @@ func TestLoginStateMismatch(t *testing.T) {
 }
 
 func TestLoginTimeout(t *testing.T) {
-	shopSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	shopSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer shopSrv.Close()
@@ -402,7 +402,7 @@ func TestLoginTimeout(t *testing.T) {
 }
 
 func TestLoginContextCancellation(t *testing.T) {
-	shopSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	shopSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer shopSrv.Close()
@@ -458,7 +458,7 @@ func TestApplyDefaults(t *testing.T) {
 }
 
 func TestExchangeJSONResponse(t *testing.T) {
-	tokenSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	tokenSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		resp := map[string]any{
 			"access_token":  "json-at",

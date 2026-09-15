@@ -193,27 +193,3 @@ func TestSetAccessTokenSeedsCache(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, tokenEndpointHit, "token endpoint should not be called when cache is seeded")
 }
-
-// captureTokenBodyWithRefresh returns a server that records the JSON body
-// sent to the token endpoint and issues a token with a rotated refresh_token.
-func captureTokenBodyWithRefresh(t *testing.T, count *int, refreshTokenFn func() string) *httptest.Server {
-	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/oauth/token" {
-			body, _ := io.ReadAll(r.Body)
-			var captured map[string]string
-			assert.NoError(t, json.Unmarshal(body, &captured))
-			*count++
-
-			rt := refreshTokenFn()
-			w.Header().Set("Content-Type", "application/json")
-			resp := fmt.Sprintf(
-				`{"access_token":"tok-%d","token_type":"Bearer","expires_in":600,"refresh_token":%q}`,
-				*count, rt,
-			)
-			_, _ = w.Write([]byte(resp))
-			return
-		}
-		_, _ = w.Write([]byte(`{}`))
-	}))
-}

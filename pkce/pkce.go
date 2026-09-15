@@ -43,11 +43,11 @@ import (
 
 // Tokens holds the result of a successful PKCE login.
 type Tokens struct {
-	BaseURL       string
-	ClientID      string
-	AccessToken   string
-	RefreshToken  string
-	Expiry        time.Time // absolute expiry of the access token
+	BaseURL      string
+	ClientID     string
+	AccessToken  string
+	RefreshToken string
+	Expiry       time.Time // absolute expiry of the access token
 }
 
 // Config configures the PKCE login flow. Zero values use sensible defaults.
@@ -136,7 +136,7 @@ func exchangeWithClient(ctx context.Context, httpClient *http.Client, baseURL, c
 		return "", "", 0, fmt.Errorf("marshal token request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", strings.TrimRight(baseURL, "/")+"/api/oauth/token", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(baseURL, "/")+"/api/oauth/token", bytes.NewReader(body))
 	if err != nil {
 		return "", "", 0, fmt.Errorf("create token request: %w", err)
 	}
@@ -147,7 +147,7 @@ func exchangeWithClient(ctx context.Context, httpClient *http.Client, baseURL, c
 	if err != nil {
 		return "", "", 0, fmt.Errorf("token request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -187,7 +187,7 @@ func Login(ctx context.Context, config Config) (*Tokens, error) {
 	if err != nil {
 		return nil, fmt.Errorf("listen for callback: %w", err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	actualAddr := listener.Addr().(*net.TCPAddr)
 	actualRedirect := fmt.Sprintf("http://%s/callback", actualAddr.String())
@@ -233,7 +233,7 @@ func Login(ctx context.Context, config Config) (*Tokens, error) {
 				return
 			}
 
-			fmt.Fprintln(w, "<html><body><h1>Authorization successful</h1><p>You can close this tab.</p></body></html>")
+			_, _ = fmt.Fprintln(w, "<html><body><h1>Authorization successful</h1><p>You can close this tab.</p></body></html>")
 			resultCh <- loginResult{code: code}
 		}),
 		ReadTimeout:  5 * time.Second,
@@ -276,10 +276,10 @@ func Login(ctx context.Context, config Config) (*Tokens, error) {
 
 	select {
 	case <-ctx.Done():
-		server.Close()
+		_ = server.Close()
 		return nil, ctx.Err()
 	case <-timer.C:
-		server.Close()
+		_ = server.Close()
 		return nil, fmt.Errorf("authorization timed out after %v", timeout)
 	case result := <-resultCh:
 		_ = server.Close()
@@ -306,11 +306,11 @@ func Login(ctx context.Context, config Config) (*Tokens, error) {
 		}
 
 		return &Tokens{
-			BaseURL:       config.BaseURL,
-			ClientID:      clientID(config.ClientID),
-			AccessToken:   accessToken,
-			RefreshToken:  refreshToken,
-			Expiry:        time.Now().Add(time.Duration(expiresIn) * time.Second),
+			BaseURL:      config.BaseURL,
+			ClientID:     clientID(config.ClientID),
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+			Expiry:       time.Now().Add(time.Duration(expiresIn) * time.Second),
 		}, nil
 	}
 }
