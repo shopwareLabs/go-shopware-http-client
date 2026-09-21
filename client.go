@@ -40,6 +40,11 @@ const (
 
 	// minErrorStatusCode is the first HTTP status code treated as an error.
 	minErrorStatusCode = 400
+
+	// DefaultUserAgent is sent as the User-Agent header on every request
+	// (token requests included) unless overridden via Config.UserAgent,
+	// Config.Headers, or per-request extraHeaders.
+	DefaultUserAgent = "go-shopware-http-client"
 )
 
 // Config configures a Client. Only BaseURL and the OAuth credentials are
@@ -68,7 +73,13 @@ type Config struct {
 
 	// Headers are attached to every request (token requests included). Use this
 	// for deployment-specific headers such as a reverse-proxy auth token.
+	// A "User-Agent" entry here overrides UserAgent/DefaultUserAgent.
 	Headers map[string]string
+
+	// UserAgent overrides DefaultUserAgent. If empty, DefaultUserAgent is
+	// sent. It can still be overridden per deployment via Headers or
+	// per request via extraHeaders (Request/RequestRaw).
+	UserAgent string
 
 	// TokenStorage caches OAuth tokens. If nil, a process-local
 	// InMemoryTokenStorage is used, caching the token for the lifetime of the
@@ -92,6 +103,7 @@ type Client struct {
 	baseURL     string
 	credentials Credentials
 	headers     map[string]string
+	userAgent   string
 	httpClient  *http.Client
 
 	tokenStorage TokenStorage
@@ -164,10 +176,16 @@ func NewClient(config Config) *Client {
 		tokenKey = credentials.identity()
 	}
 
+	userAgent := config.UserAgent
+	if userAgent == "" {
+		userAgent = DefaultUserAgent
+	}
+
 	return &Client{
 		baseURL:      strings.TrimRight(config.BaseURL, "/"),
 		credentials:  credentials,
 		headers:      config.Headers,
+		userAgent:    userAgent,
 		httpClient:   httpClient,
 		tokenStorage: storage,
 		tokenKey:     tokenKey,
@@ -277,6 +295,7 @@ func (c *Client) fetchToken(ctx context.Context) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	c.setUserAgent(req)
 	c.applyHeaders(req)
 
 	resp, err := c.httpClient.Do(req)
@@ -320,6 +339,14 @@ func (c *Client) fetchToken(ctx context.Context) (string, error) {
 func (c *Client) applyHeaders(req *http.Request) {
 	for k, v := range c.headers {
 		req.Header.Set(k, v)
+	}
+}
+
+// setUserAgent applies the default User-Agent. It runs before applyHeaders
+// and extraHeaders so both can still override it.
+func (c *Client) setUserAgent(req *http.Request) {
+	if c.userAgent != "" {
+		req.Header.Set("User-Agent", c.userAgent)
 	}
 }
 
@@ -410,6 +437,7 @@ func (c *Client) do(ctx context.Context, method, path string, bodyFactory func()
 		return nil, err
 	}
 
+	c.setUserAgent(req)
 	c.applyHeaders(req)
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
