@@ -82,7 +82,16 @@ type Config struct {
 	// HTTPClient performs the token exchange request. If nil, http.DefaultClient
 	// is used. Inject your own to add custom transports or timeouts.
 	HTTPClient *http.Client
+
+	// UserAgent overrides DefaultUserAgent. If empty, DefaultUserAgent is sent.
+	UserAgent string
 }
+
+const (
+	// DefaultUserAgent is sent as the User-Agent header on token requests
+	// unless overridden via Config.UserAgent.
+	DefaultUserAgent = "go-shopware-http-client"
+)
 
 // GenerateChallenge creates a PKCE code verifier and its S256 challenge.
 // The verifier is a 43–128 character unreserved string (RFC 7636).
@@ -122,7 +131,7 @@ func AuthorizationURL(config Config, challenge, state string) string {
 }
 
 // exchangeWithClient performs the token exchange using the provided HTTP client.
-func exchangeWithClient(ctx context.Context, httpClient *http.Client, baseURL, clientID, redirectURI, code, verifier string) (accessToken, refreshToken string, expiresIn int, err error) {
+func exchangeWithClient(ctx context.Context, httpClient *http.Client, baseURL, clientID, redirectURI, code, verifier, userAgent string) (accessToken, refreshToken string, expiresIn int, err error) {
 	payload := map[string]string{
 		"grant_type":    "authorization_code",
 		"client_id":     clientID,
@@ -142,6 +151,9 @@ func exchangeWithClient(ctx context.Context, httpClient *http.Client, baseURL, c
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	if userAgent != "" {
+		req.Header.Set("User-Agent", userAgent)
+	}
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -173,7 +185,7 @@ func exchangeWithClient(ctx context.Context, httpClient *http.Client, baseURL, c
 // endpoint and returns the parsed token response. It POSTs a JSON body
 // matching the core Client's fetchToken format.
 func Exchange(ctx context.Context, baseURL, clientID, redirectURI, code, verifier string) (accessToken, refreshToken string, expiresIn int, err error) {
-	return exchangeWithClient(ctx, http.DefaultClient, baseURL, clientID, redirectURI, code, verifier)
+	return exchangeWithClient(ctx, http.DefaultClient, baseURL, clientID, redirectURI, code, verifier, DefaultUserAgent)
 }
 
 // Login performs the full PKCE authorization-code flow: generates a challenge,
@@ -292,6 +304,10 @@ func Login(ctx context.Context, config Config) (*Tokens, error) {
 		if httpClient == nil {
 			httpClient = http.DefaultClient
 		}
+		userAgent := config.UserAgent
+		if userAgent == "" {
+			userAgent = DefaultUserAgent
+		}
 		accessToken, refreshToken, expiresIn, err := exchangeWithClient(
 			ctx,
 			httpClient,
@@ -300,6 +316,7 @@ func Login(ctx context.Context, config Config) (*Tokens, error) {
 			actualRedirect,
 			result.code,
 			verifier,
+			userAgent,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("exchange code: %w", err)

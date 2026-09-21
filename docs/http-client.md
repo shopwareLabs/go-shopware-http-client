@@ -28,6 +28,26 @@ shopware.Config{
 }
 ```
 
+## User-Agent
+
+Every request (token requests included) sends `User-Agent:
+go-shopware-http-client` by default.
+
+Override it globally:
+
+```go
+shopware.Config{
+	UserAgent: "my-app/1.0",
+}
+```
+
+or per deployment / per request — later entries win:
+
+1. per-request `extraHeaders["User-Agent"]` (`Request`/`RequestRaw`)
+2. `Config.Headers["User-Agent"]`
+3. `Config.UserAgent`
+4. `DefaultUserAgent` (`"go-shopware-http-client"`)
+
 ## See also
 
 - [Raw requests](./raw-requests.md) — per-request headers.
