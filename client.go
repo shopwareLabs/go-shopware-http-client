@@ -84,7 +84,8 @@ type Config struct {
 	// TokenStorage caches OAuth tokens. If nil, a process-local
 	// InMemoryTokenStorage is used, caching the token for the lifetime of the
 	// Client. Provide a distributed store (Redis, ...) to share tokens across
-	// instances, or NewNoOpTokenStorage() to disable caching.
+	// instances, NewFileTokenStorage() to persist tokens on disk across
+	// restarts and processes, or NewNoOpTokenStorage() to disable caching.
 	TokenStorage TokenStorage
 
 	// TokenStorageKey is the key under which this Client's token is stored. If
