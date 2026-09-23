@@ -52,17 +52,3 @@ func TestAccessTokenReturnsCachedToken(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, int32(1), tokenCalls.Load())
 }
-
-func TestClearCache(t *testing.T) {
-	var method, path string
-	srv := newTestServer(t, nil, func(w http.ResponseWriter, r *http.Request) {
-		method, path = r.Method, r.URL.Path
-		w.WriteHeader(http.StatusNoContent)
-	})
-	defer srv.Close()
-
-	c := NewClient(Config{BaseURL: srv.URL, ClientID: "i", ClientSecret: "s"})
-	assert.NoError(t, c.ClearCache(context.Background()))
-	assert.Equal(t, http.MethodDelete, method)
-	assert.Equal(t, "/api/_action/cache", path)
-}

@@ -44,17 +44,18 @@ resp.Headers         // http.Header
 resp.JSON(&target)   // unmarshal helper
 ```
 
-## Shop helpers
+## Shop info
 
-A few common non-DAL endpoints have typed helpers on the client:
+The shop info endpoint has a typed helper on the client:
 
 ```go
 info, err := client.Info(ctx)   // GET /_info/config, cached per Client
 info.Version                    // "6.7.1.0" (also via client.Version(ctx))
 info.HasBundle("Storefront")
-
-err = client.ClearCache(ctx)    // DELETE /_action/cache
 ```
+
+Operations on the shop as a whole live in the
+[`instance`](./instance.md) sub-package.
 
 ## See also
 

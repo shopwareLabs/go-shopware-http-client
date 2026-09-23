@@ -54,9 +54,3 @@ func (c *Client) Info(ctx context.Context) (*Info, error) {
 	}
 	return v.(*Info), nil
 }
-
-// ClearCache clears the shop's caches (DELETE /api/_action/cache).
-func (c *Client) ClearCache(ctx context.Context) error {
-	_, err := c.Delete(ctx, "/_action/cache", nil)
-	return err
-}
