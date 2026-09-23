@@ -4,22 +4,22 @@
 //
 // Typical usage:
 //
-//	tokens, err := pkce.Login(ctx, pkce.Config{
-//	    BaseURL: "https://shop.example.com",
-//	})
+//	dir, _ := pkce.DefaultFileStoreDir()
+//	store, err := pkce.NewFileStore(dir)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	creds := shopware.NewRefreshTokenCredentials(tokens.ClientID, tokens.RefreshToken)
-//	client := shopware.NewClient(shopware.Config{
-//	    BaseURL:     tokens.BaseURL,
-//	    Credentials: creds,
-//	})
-//	// Seed the access token so the first API call doesn't need a refresh.
-//	_ = client.SetAccessToken(ctx, tokens.AccessToken, tokens.Expiry)
+//	// Reuses the saved session for the shop, or opens the browser to log in.
+//	client, err := pkce.NewClient(ctx, pkce.Config{
+//	    BaseURL: "https://shop.example.com",
+//	}, store)
 //
-// The package uses only the standard library.
+// NewClient persists every token change to the store, including rotated
+// refresh tokens. Login is the lower-level building block when you want to
+// manage the tokens yourself.
+//
+// Apart from the parent shopware package, it uses only the standard library.
 package pkce
 
 import (
@@ -41,13 +41,14 @@ import (
 	"time"
 )
 
-// Tokens holds the result of a successful PKCE login.
+// Tokens holds the result of a successful PKCE login. It is also the session
+// a Store persists.
 type Tokens struct {
-	BaseURL      string
-	ClientID     string
-	AccessToken  string
-	RefreshToken string
-	Expiry       time.Time // absolute expiry of the access token
+	BaseURL      string    `json:"base_url"`
+	ClientID     string    `json:"client_id"`
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
+	Expiry       time.Time `json:"expiry"` // absolute expiry of the access token
 }
 
 // Config configures the PKCE login flow. Zero values use sensible defaults.

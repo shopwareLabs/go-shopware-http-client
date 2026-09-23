@@ -102,6 +102,14 @@ The client stores each token's real expiry and applies a 30s safety margin when
 reading it back, so a token is never used in the window where the server might
 already reject it.
 
+## PKCE logins
+
+`TokenStorage` only caches access tokens, which can always be fetched again. A
+PKCE login also has a long-lived refresh token that must survive between runs,
+so `pkce.NewClient` keeps the whole session in a `pkce.Store` instead and you
+do not configure a `TokenStorage` for it. See
+[Authentication](./authentication.md#logging-in-with-pkcenewclient).
+
 ## See also
 
 - [Authentication](./authentication.md) — how the cached token is obtained.

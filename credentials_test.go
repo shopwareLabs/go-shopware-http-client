@@ -3,6 +3,7 @@ package shopware
 import (
 	"context"
 	"encoding/json/v2"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -192,4 +193,41 @@ func TestSetAccessTokenSeedsCache(t *testing.T) {
 	_, err := c.Get(ctx, "/_info/config")
 	assert.NoError(t, err)
 	assert.False(t, tokenEndpointHit, "token endpoint should not be called when cache is seeded")
+}
+
+func TestRefreshTokenCredentialsOnRotateRunsBeforeAccessTokenIsStored(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"access_token":"at","expires_in":600,"refresh_token":"rotated-rt"}`))
+	}))
+	defer srv.Close()
+
+	storage := NewInMemoryTokenStorage()
+	creds := NewRefreshTokenCredentials("shopware-cli", "initial-rt")
+	var rotated string
+	creds.OnRotate = func(ctx context.Context, refreshToken string) error {
+		rotated = refreshToken
+		token, _, _ := storage.Get(ctx, "pkce:shopware-cli")
+		assert.Equal(t, "", token, "access token must not be stored before the rotation is persisted")
+		return nil
+	}
+
+	c := NewClient(Config{BaseURL: srv.URL, Credentials: creds, TokenStorage: storage})
+	assert.NoError(t, c.Authenticate(context.Background()))
+	assert.Equal(t, "rotated-rt", rotated)
+	assert.Equal(t, "rotated-rt", creds.RefreshToken())
+}
+
+func TestRefreshTokenCredentialsOnRotateErrorFailsRequest(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"access_token":"at","expires_in":600,"refresh_token":"rotated-rt"}`))
+	}))
+	defer srv.Close()
+
+	creds := NewRefreshTokenCredentials("shopware-cli", "initial-rt")
+	creds.OnRotate = func(context.Context, string) error { return errors.New("disk full") }
+
+	c := NewClient(Config{BaseURL: srv.URL, Credentials: creds})
+	err := c.Authenticate(context.Background())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "persist rotated refresh token: disk full")
 }

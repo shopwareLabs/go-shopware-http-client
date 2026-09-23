@@ -1,6 +1,7 @@
 package shopware
 
 import (
+	"context"
 	"sync"
 )
 
@@ -22,11 +23,11 @@ type Credentials interface {
 	identity() string
 }
 
-// refreshTokenUpdater is an optional extension point on Credentials.
-// Implementations signal that fetchToken should persist a rotated
-// refresh_token from the token response back into the credentials.
-type refreshTokenUpdater interface {
-	setRefreshToken(refreshToken string)
+// refreshTokenRotator is an optional extension point on Credentials.
+// Implementations receive a rotated refresh_token from the token response
+// before the new access token is stored.
+type refreshTokenRotator interface {
+	rotateRefreshToken(ctx context.Context, refreshToken string) error
 }
 
 // IntegrationCredentials authenticates as a Shopware integration using the
@@ -86,10 +87,21 @@ func (c PasswordCredentials) identity() string {
 // transparently refresh the access token without further user interaction.
 //
 // The refresh token is mutable (supports rotation) and thread-safe.
+//
+// Shopware revokes the previous refresh token on every refresh, so a rotated
+// token that is not persisted logs the user out on the next run. Set OnRotate
+// to persist it, or use pkce.NewClient, which does this for you.
 type RefreshTokenCredentials struct {
 	ClientID string
-	mu       sync.Mutex
-	refresh  string
+
+	// OnRotate, if set, is called with the new refresh token whenever the
+	// server rotates it, before the new access token is used. An error is
+	// returned from the request that triggered the refresh. Set it before the
+	// credentials are first used.
+	OnRotate func(ctx context.Context, refreshToken string) error
+
+	mu      sync.Mutex
+	refresh string
 }
 
 // NewRefreshTokenCredentials creates RefreshTokenCredentials with the given
@@ -132,8 +144,10 @@ func (c *RefreshTokenCredentials) identity() string {
 	return "pkce:" + c.ClientID
 }
 
-func (c *RefreshTokenCredentials) setRefreshToken(refreshToken string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.refresh = refreshToken
+func (c *RefreshTokenCredentials) rotateRefreshToken(ctx context.Context, refreshToken string) error {
+	c.SetRefreshToken(refreshToken)
+	if c.OnRotate == nil {
+		return nil
+	}
+	return c.OnRotate(ctx, refreshToken)
 }
