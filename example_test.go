@@ -180,29 +180,20 @@ func ExampleAPIError() {
 func ExampleNewClient_pkceLogin() {
 	ctx := context.Background()
 
-	// Phase 1: interactive login — opens the browser, waits for the user
-	// to approve, then exchanges the code for tokens.
-	tokens, err := pkce.Login(ctx, pkce.Config{
-		BaseURL: "https://my-shop.example.com",
-	})
+	store, err := pkce.NewFileStore("/path/to/sessions")
 	if err != nil {
 		return
 	}
 
-	// Phase 2: use the tokens for ongoing API access.
-	creds := shopware.NewRefreshTokenCredentials(tokens.ClientID, tokens.RefreshToken)
-	client := shopware.NewClient(shopware.Config{
-		BaseURL:     tokens.BaseURL,
-		Credentials: creds,
-	})
-
-	// Seed the access token so the first call doesn't need a refresh.
-	if err := client.SetAccessToken(ctx, tokens.AccessToken, tokens.Expiry); err != nil {
+	// Reuses the saved session for the shop, or opens the browser to log in.
+	// Every token change, including rotated refresh tokens, is saved to store.
+	client, err := pkce.NewClient(ctx, pkce.Config{
+		BaseURL: "https://my-shop.example.com",
+	}, store)
+	if err != nil {
 		return
 	}
 
-	// The client now works like any other — it refreshes the token
-	// transparently when it expires, rotating the refresh token automatically.
 	products := shopware.NewRepository[exampleProduct](client, "product")
 	result, err := products.Search(ctx, shopware.NewCriteria().SetLimit(10))
 	if err != nil {

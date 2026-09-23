@@ -1,3 +1,3 @@
 /vendor/
 *.test
-pkce-cli
+/pkce-cli

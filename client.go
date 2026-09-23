@@ -41,6 +41,10 @@ const (
 	// minErrorStatusCode is the first HTTP status code treated as an error.
 	minErrorStatusCode = 400
 
+	// maxErrorBodyLen caps how much of an unexpected response body is quoted
+	// in error messages.
+	maxErrorBodyLen = 200
+
 	// DefaultUserAgent is sent as the User-Agent header on every request
 	// (token requests included) unless overridden via Config.UserAgent,
 	// Config.Headers, or per-request extraHeaders.
@@ -302,7 +306,23 @@ func (c *Client) fetchToken(ctx context.Context) (string, error) {
 
 	var tokenResp tokenResponse
 	if err := json.Unmarshal(respBody, &tokenResp); err != nil {
-		return "", fmt.Errorf("decode token response: %w", err)
+		return "", fmt.Errorf("decode token response (status %d, content-type %q, body %q): %w",
+			resp.StatusCode, resp.Header.Get("Content-Type"), truncate(respBody, maxErrorBodyLen), err)
+	}
+	if tokenResp.AccessToken == "" {
+		return "", fmt.Errorf("token response (status %d) has no access_token: %q",
+			resp.StatusCode, truncate(respBody, maxErrorBodyLen))
+	}
+
+	// Hand a rotated refresh_token to the credentials first: the server has
+	// already revoked the previous one, so it must be persisted before anything
+	// else can fail.
+	if tokenResp.RefreshToken != "" {
+		if rotator, ok := c.credentials.(refreshTokenRotator); ok {
+			if err := rotator.rotateRefreshToken(ctx, tokenResp.RefreshToken); err != nil {
+				return "", fmt.Errorf("persist rotated refresh token: %w", err)
+			}
+		}
 	}
 
 	// Store the real expiry; the safety margin is applied when reading the
@@ -310,14 +330,6 @@ func (c *Client) fetchToken(ctx context.Context) (string, error) {
 	expiry := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 	if err := c.tokenStorage.Set(ctx, c.tokenKey, tokenResp.AccessToken, expiry); err != nil {
 		return "", fmt.Errorf("store token: %w", err)
-	}
-
-	// If the server returned a rotated refresh_token and our credentials
-	// support it, persist the new value so subsequent refreshes work.
-	if tokenResp.RefreshToken != "" {
-		if updater, ok := c.credentials.(refreshTokenUpdater); ok {
-			updater.setRefreshToken(tokenResp.RefreshToken)
-		}
 	}
 
 	return tokenResp.AccessToken, nil
@@ -477,4 +489,12 @@ func newAPIError(statusCode int, body []byte) *APIError {
 		apiErr.Detail = envelope.Errors[0].Detail
 	}
 	return apiErr
+}
+
+// truncate returns at most n bytes of b, marking a cut with "...".
+func truncate(b []byte, n int) string {
+	if len(b) <= n {
+		return string(b)
+	}
+	return string(b[:n]) + "..."
 }

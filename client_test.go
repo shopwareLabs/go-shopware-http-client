@@ -167,3 +167,28 @@ func TestClientTokenFailurePropagates(t *testing.T) {
 	assert.ErrorAs(t, err, &apiErr)
 	assert.Equal(t, http.StatusUnauthorized, apiErr.StatusCode)
 }
+
+func TestTokenResponseDecodeErrorShowsResponse(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte("hello from a proxy"))
+	}))
+	defer srv.Close()
+
+	c := NewClient(Config{BaseURL: srv.URL, ClientID: "i", ClientSecret: "s"})
+	err := c.Authenticate(context.Background())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `status 200, content-type "text/html", body "hello from a proxy"`)
+}
+
+func TestTokenResponseWithoutAccessTokenFails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"token_type":"Bearer"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(Config{BaseURL: srv.URL, ClientID: "i", ClientSecret: "s"})
+	err := c.Authenticate(context.Background())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "has no access_token")
+}

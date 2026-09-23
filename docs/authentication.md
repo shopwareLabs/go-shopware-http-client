@@ -58,79 +58,95 @@ clients (Shopware PR [#20277](https://github.com/shopware/shopware/pull/20277)).
 This lets a CLI or native app authenticate on behalf of a user without storing
 the user's password or requiring an integration secret.
 
-The flow has two phases:
+### Logging in with `pkce.NewClient`
 
-1. **Interactive login** — the `pkce` sub-package opens the browser, the user
-   approves access, and the app receives an access + refresh token.
-2. **Ongoing use** — the refresh token is stored in
-   `RefreshTokenCredentials` so the client can transparently refresh the access
-   token on subsequent runs.
-
-### Phase 1: Interactive login
+`pkce.NewClient` returns a ready-to-use client and keeps the user logged in
+across runs:
 
 ```go
 import (
 	"context"
 	"log"
 
-	"github.com/shopwareLabs/go-shopware-http-client"
 	"github.com/shopwareLabs/go-shopware-http-client/pkce"
 )
 
 func main() {
-	tokens, err := pkce.Login(context.Background(), pkce.Config{
-		BaseURL: "https://my-shop.example.com",
-	})
+	ctx := context.Background()
+
+	dir, err := pkce.DefaultFileStoreDir() // <user config dir>/go-shopware-http-client/pkce
+	if err != nil {
+		log.Fatal(err)
+	}
+	store, err := pkce.NewFileStore(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// tokens.RefreshToken should be persisted (e.g., to a file or keychain)
-	// so the user doesn't have to log in again.
+	client, err := pkce.NewClient(ctx, pkce.Config{
+		BaseURL: "https://my-shop.example.com",
+	}, store)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := client.Get(ctx, "/_info/me")
+	// ...
 }
 ```
 
-`pkce.Login` handles the entire flow:
-- Generates a PKCE code verifier and S256 challenge
-- Opens the browser to the Shopware authorization page
-- Listens on a loopback address for the callback
-- Exchanges the authorization code for tokens
+What `NewClient` does:
 
-### Phase 2: Using the tokens
+- **Saved session:** if the store has a session for the shop, it is reused
+  without opening the browser.
+- **No session, or the refresh token was rejected:** it runs the browser login
+  (verifier and S256 challenge, a loopback callback server, the code exchange)
+  and saves the new session.
+- **While running:** the access token and the refresh token live together in
+  the store. Every change is written as it happens. Shopware revokes the old
+  refresh token on each refresh, so the rotated one is saved before the new
+  access token is used. A crash or an early return can no longer log the user
+  out.
 
-After the interactive login, create a client with `RefreshTokenCredentials`:
+Sessions are keyed by base URL, so one store can hold logins for many shops.
+Implement `pkce.Store` (`Load`, `Save`, `Delete`) to keep sessions somewhere
+else, such as the OS keychain. Call `store.Delete(ctx, baseURL)` to log out.
+
+### Managing the tokens yourself
+
+`pkce.Login` runs only the browser flow and returns the tokens. Pair it with
+`RefreshTokenCredentials` and set `OnRotate`, which is called with each new
+refresh token before the new access token is stored:
 
 ```go
+tokens, err := pkce.Login(ctx, pkce.Config{BaseURL: "https://my-shop.example.com"})
+if err != nil {
+	log.Fatal(err)
+}
+
 creds := shopware.NewRefreshTokenCredentials(tokens.ClientID, tokens.RefreshToken)
+creds.OnRotate = func(ctx context.Context, refreshToken string) error {
+	return saveRefreshToken(refreshToken) // your own persistence
+}
+
 client := shopware.NewClient(shopware.Config{
 	BaseURL:     tokens.BaseURL,
 	Credentials: creds,
 })
 
-// Seed the access token so the first API call doesn't need a refresh.
-if err := client.SetAccessToken(ctx, tokens.AccessToken, tokens.Expiry); err != nil {
-	log.Fatal(err)
-}
-
-// The client now works like any other — it refreshes the token transparently
-// when it expires, and the refresh token is automatically rotated.
-//
-// Pair this with `NewFileTokenStorage` (see Token storage) so the access
-// token is also cached on disk across CLI runs — only the refresh token
-// itself still needs persisting (file or keychain) between logins.
+// Seed the access token so the first call needs no refresh round-trip.
+_ = client.SetAccessToken(ctx, tokens.AccessToken, tokens.Expiry)
 ```
 
-### Refresh token rotation
-
-`RefreshTokenCredentials` supports refresh token rotation: when the server
-returns a new `refresh_token` in the token response, the client automatically
-updates the stored value. Persist `creds.RefreshToken()` after use to keep the
-rotated token for future runs.
+If `OnRotate` returns an error, the request that triggered the refresh fails
+with it, so a token that could not be saved never goes unnoticed.
 
 ### Customizing the PKCE flow
 
+`pkce.NewClient` and `pkce.Login` take the same `Config`:
+
 ```go
-tokens, err := pkce.Login(ctx, pkce.Config{
+client, err := pkce.NewClient(ctx, pkce.Config{
 	BaseURL:      "https://my-shop.example.com",
 	ClientID:     "my-custom-cli",    // default: "shopware-cli"
 	Scope:        "write",            // default: "write"
@@ -140,10 +156,10 @@ tokens, err := pkce.Login(ctx, pkce.Config{
 	OpenURL: func(u string) error {   // custom browser opener
 		return open.Run(u)
 	},
-	HTTPClient: &http.Client{         // custom HTTP client for token exchange
+	HTTPClient: &http.Client{         // custom HTTP client for token and API requests
 		Timeout: 30 * time.Second,
 	},
-})
+}, store)
 ```
 
 ## Custom credentials
