@@ -20,6 +20,10 @@ import (
 	"github.com/shyim/go-version"
 )
 
+// cloudBundleName is the admin bundle only present on Shopware SaaS shops.
+// Cloud handling is kept private so it can be dropped without an API break.
+const cloudBundleName = "SaasRufus"
+
 // removeUsesPostConstraint is the first version where the remove action is a
 // POST instead of a DELETE.
 var removeUsesPostConstraint = version.MustConstraints(version.NewConstraint(">=6.6.10.2"))
@@ -108,11 +112,33 @@ func (m *Manager) Upload(ctx context.Context, zip io.Reader) error {
 	return m.uploadMultipart(ctx, "/_action/extension/upload", nil, zip)
 }
 
-// UploadUpdateToCloud uploads an extension update to a cloud shop, associating
+// uploadUpdateToCloud uploads an extension update to a cloud shop, associating
 // it with the given extension name.
-func (m *Manager) UploadUpdateToCloud(ctx context.Context, extensionName string, zip io.Reader) error {
+func (m *Manager) uploadUpdateToCloud(ctx context.Context, extensionName string, zip io.Reader) error {
 	return m.uploadMultipart(ctx, "/_action/extension/update-private",
 		map[string]string{"media": extensionName}, zip)
+}
+
+// UploadOrUpdate uploads an extension zip, picking the endpoint the shop
+// requires for it. Prefer it over Upload when the shop may be a Shopware
+// cloud shop, which needs a different endpoint to update a known extension.
+func (m *Manager) UploadOrUpdate(ctx context.Context, extensionName string, zip io.Reader) error {
+	info, err := m.client.Info(ctx)
+	if err != nil {
+		return err
+	}
+	if !info.HasBundle(cloudBundleName) {
+		return m.Upload(ctx, zip)
+	}
+
+	list, err := m.ListAvailable(ctx)
+	if err != nil {
+		return err
+	}
+	if list.GetByName(extensionName) == nil {
+		return m.Upload(ctx, zip)
+	}
+	return m.uploadUpdateToCloud(ctx, extensionName, zip)
 }
 
 // uploadMultipart builds a multipart/form-data body with the given form fields

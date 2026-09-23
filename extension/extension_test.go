@@ -153,7 +153,7 @@ func TestUploadUpdateToCloudIncludesMediaField(t *testing.T) {
 	})
 	defer srv.Close()
 
-	err := newManager(srv.URL).UploadUpdateToCloud(context.Background(), "SwagFoo", strings.NewReader("ZIP"))
+	err := newManager(srv.URL).uploadUpdateToCloud(context.Background(), "SwagFoo", strings.NewReader("ZIP"))
 	assert.NoError(t, err)
 	assert.Equal(t, "SwagFoo", fields["media"])
 	assert.Equal(t, "ZIP", file)
@@ -203,4 +203,45 @@ func multipartAll(t *testing.T, body io.Reader, boundary string) (map[string]str
 		}
 	}
 	return fields, file
+}
+
+func TestUploadOrUpdatePicksEndpoint(t *testing.T) {
+	cases := []struct {
+		name     string
+		bundles  string
+		wantPath string
+	}{
+		{"self-managed", `{}`, "/api/_action/extension/upload"},
+		{"cloud, unknown extension", `{"SaasRufus":{}}`, "/api/_action/extension/upload"},
+		{"cloud, known extension", `{"SaasRufus":{}}`, "/api/_action/extension/update-private"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			known := tc.wantPath == "/api/_action/extension/update-private"
+			var uploadPath string
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/api/oauth/token":
+					_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":600}`))
+				case "/api/_info/config":
+					_, _ = w.Write([]byte(`{"version":"6.7.0.0","bundles":` + tc.bundles + `}`))
+				case "/api/_action/extension/installed":
+					if known {
+						_, _ = w.Write([]byte(`[{"name":"SwagFoo","type":"app"}]`))
+						return
+					}
+					_, _ = w.Write([]byte(`[]`))
+				default:
+					uploadPath = r.URL.Path
+					w.WriteHeader(http.StatusNoContent)
+				}
+			}))
+			defer srv.Close()
+
+			err := newManager(srv.URL).UploadOrUpdate(context.Background(), "SwagFoo", strings.NewReader("ZIP"))
+			assert.NoError(t, err)
+			assert.Equal(t, tc.wantPath, uploadPath)
+		})
+	}
 }
