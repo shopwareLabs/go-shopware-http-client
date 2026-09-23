@@ -134,7 +134,7 @@ func TestUploadMultipart(t *testing.T) {
 	})
 	defer srv.Close()
 
-	err := newManager(srv.URL).Upload(context.Background(), strings.NewReader("ZIPDATA"))
+	err := newManager(srv.URL).Upload(context.Background(), "SwagFoo", strings.NewReader("ZIPDATA"))
 	assert.NoError(t, err)
 
 	assert.Equal(t, "/api/_action/extension/upload", gotPath)
@@ -205,7 +205,7 @@ func multipartAll(t *testing.T, body io.Reader, boundary string) (map[string]str
 	return fields, file
 }
 
-func TestUploadOrUpdatePicksEndpoint(t *testing.T) {
+func TestUploadPicksEndpoint(t *testing.T) {
 	cases := []struct {
 		name     string
 		bundles  string
@@ -239,7 +239,7 @@ func TestUploadOrUpdatePicksEndpoint(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			err := newManager(srv.URL).UploadOrUpdate(context.Background(), "SwagFoo", strings.NewReader("ZIP"))
+			err := newManager(srv.URL).Upload(context.Background(), "SwagFoo", strings.NewReader("ZIP"))
 			assert.NoError(t, err)
 			assert.Equal(t, tc.wantPath, uploadPath)
 		})

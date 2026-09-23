@@ -58,12 +58,9 @@ Uploads send a `multipart/form-data` body. Pass any `io.Reader` for the zip.
 zip, _ := os.Open("SwagPayPal.zip")
 defer zip.Close()
 
-// Works on every shop, including Shopware cloud shops, which need a
-// different endpoint to update an extension they already know:
-err := mgr.UploadOrUpdate(ctx, "SwagPayPal", zip)
-
-// Self-managed shops only:
-err = mgr.Upload(ctx, zip)
+// Works on self-managed and Shopware cloud shops alike. The name is
+// needed to update an extension a cloud shop already knows.
+err := mgr.Upload(ctx, "SwagPayPal", zip)
 ```
 
 ## See also

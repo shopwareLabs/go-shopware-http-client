@@ -107,8 +107,30 @@ func (m *Manager) lifecycle(ctx context.Context, method, path string) error {
 	return err
 }
 
-// Upload uploads an extension zip to a self-managed shop.
-func (m *Manager) Upload(ctx context.Context, zip io.Reader) error {
+// Upload uploads an extension zip. It works on self-managed and Shopware
+// cloud shops alike; the extension name is needed to update an extension a
+// cloud shop already knows.
+func (m *Manager) Upload(ctx context.Context, extensionName string, zip io.Reader) error {
+	info, err := m.client.Info(ctx)
+	if err != nil {
+		return err
+	}
+	if !info.HasBundle(cloudBundleName) {
+		return m.uploadNew(ctx, zip)
+	}
+
+	list, err := m.ListAvailable(ctx)
+	if err != nil {
+		return err
+	}
+	if list.GetByName(extensionName) == nil {
+		return m.uploadNew(ctx, zip)
+	}
+	return m.uploadUpdateToCloud(ctx, extensionName, zip)
+}
+
+// uploadNew uploads an extension zip via the regular upload endpoint.
+func (m *Manager) uploadNew(ctx context.Context, zip io.Reader) error {
 	return m.uploadMultipart(ctx, "/_action/extension/upload", nil, zip)
 }
 
@@ -117,28 +139,6 @@ func (m *Manager) Upload(ctx context.Context, zip io.Reader) error {
 func (m *Manager) uploadUpdateToCloud(ctx context.Context, extensionName string, zip io.Reader) error {
 	return m.uploadMultipart(ctx, "/_action/extension/update-private",
 		map[string]string{"media": extensionName}, zip)
-}
-
-// UploadOrUpdate uploads an extension zip, picking the endpoint the shop
-// requires for it. Prefer it over Upload when the shop may be a Shopware
-// cloud shop, which needs a different endpoint to update a known extension.
-func (m *Manager) UploadOrUpdate(ctx context.Context, extensionName string, zip io.Reader) error {
-	info, err := m.client.Info(ctx)
-	if err != nil {
-		return err
-	}
-	if !info.HasBundle(cloudBundleName) {
-		return m.Upload(ctx, zip)
-	}
-
-	list, err := m.ListAvailable(ctx)
-	if err != nil {
-		return err
-	}
-	if list.GetByName(extensionName) == nil {
-		return m.Upload(ctx, zip)
-	}
-	return m.uploadUpdateToCloud(ctx, extensionName, zip)
 }
 
 // uploadMultipart builds a multipart/form-data body with the given form fields
