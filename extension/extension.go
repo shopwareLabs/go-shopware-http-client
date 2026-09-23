@@ -20,6 +20,10 @@ import (
 	"github.com/shyim/go-version"
 )
 
+// cloudBundleName is the admin bundle only present on Shopware SaaS shops.
+// Cloud handling is kept private so it can be dropped without an API break.
+const cloudBundleName = "SaasRufus"
+
 // removeUsesPostConstraint is the first version where the remove action is a
 // POST instead of a DELETE.
 var removeUsesPostConstraint = version.MustConstraints(version.NewConstraint(">=6.6.10.2"))
@@ -103,14 +107,36 @@ func (m *Manager) lifecycle(ctx context.Context, method, path string) error {
 	return err
 }
 
-// Upload uploads an extension zip to a self-managed shop.
-func (m *Manager) Upload(ctx context.Context, zip io.Reader) error {
+// Upload uploads an extension zip. It works on self-managed and Shopware
+// cloud shops alike; the extension name is needed to update an extension a
+// cloud shop already knows.
+func (m *Manager) Upload(ctx context.Context, extensionName string, zip io.Reader) error {
+	info, err := m.client.Info(ctx)
+	if err != nil {
+		return err
+	}
+	if !info.HasBundle(cloudBundleName) {
+		return m.uploadNew(ctx, zip)
+	}
+
+	list, err := m.ListAvailable(ctx)
+	if err != nil {
+		return err
+	}
+	if list.GetByName(extensionName) == nil {
+		return m.uploadNew(ctx, zip)
+	}
+	return m.uploadUpdateToCloud(ctx, extensionName, zip)
+}
+
+// uploadNew uploads an extension zip via the regular upload endpoint.
+func (m *Manager) uploadNew(ctx context.Context, zip io.Reader) error {
 	return m.uploadMultipart(ctx, "/_action/extension/upload", nil, zip)
 }
 
-// UploadUpdateToCloud uploads an extension update to a cloud shop, associating
+// uploadUpdateToCloud uploads an extension update to a cloud shop, associating
 // it with the given extension name.
-func (m *Manager) UploadUpdateToCloud(ctx context.Context, extensionName string, zip io.Reader) error {
+func (m *Manager) uploadUpdateToCloud(ctx context.Context, extensionName string, zip io.Reader) error {
 	return m.uploadMultipart(ctx, "/_action/extension/update-private",
 		map[string]string{"media": extensionName}, zip)
 }

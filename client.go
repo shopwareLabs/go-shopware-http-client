@@ -114,11 +114,11 @@ type Client struct {
 	// re-auth) into a single in-flight request that all callers share.
 	tokenGroup singleflight.Group
 
-	// versionGroup collapses concurrent /_info/config fetches; version caches
-	// the resolved Shopware version string.
-	versionGroup singleflight.Group
-	versionMu    sync.Mutex
-	version      string
+	// infoGroup collapses concurrent /_info/config fetches; info caches the
+	// decoded response.
+	infoGroup singleflight.Group
+	infoMu    sync.Mutex
+	info      *Info
 }
 
 type tokenResponse struct {
@@ -200,37 +200,23 @@ func (c *Client) Authenticate(ctx context.Context) error {
 	return err
 }
 
-// Version returns the shop's Shopware version (e.g. "6.7.0.0"), fetching it
-// from /api/_info/config once and caching the result. Concurrent callers share
-// a single fetch. Endpoint helpers use it to gate version-specific behavior.
+// Version returns the shop's Shopware version (e.g. "6.7.0.0"). It is read
+// from the cached Info, so /api/_info/config is fetched at most once.
+// Endpoint helpers use it to gate version-specific behavior.
 func (c *Client) Version(ctx context.Context) (string, error) {
-	c.versionMu.Lock()
-	cached := c.version
-	c.versionMu.Unlock()
-	if cached != "" {
-		return cached, nil
-	}
-
-	v, err, _ := c.versionGroup.Do("version", func() (any, error) {
-		resp, err := c.Get(ctx, "/_info/config")
-		if err != nil {
-			return "", err
-		}
-		var info struct {
-			Version string `json:"version"`
-		}
-		if err := resp.JSON(&info); err != nil {
-			return "", fmt.Errorf("decode _info/config: %w", err)
-		}
-		c.versionMu.Lock()
-		c.version = info.Version
-		c.versionMu.Unlock()
-		return info.Version, nil
-	})
+	info, err := c.Info(ctx)
 	if err != nil {
 		return "", err
 	}
-	return v.(string), nil
+	return info.Version, nil
+}
+
+// AccessToken returns a valid OAuth access token, fetching or refreshing it
+// when the cached one is missing or about to expire. Use it to hand the token
+// to external tools (curl, a browser session, ...); regular requests through
+// the Client authenticate on their own.
+func (c *Client) AccessToken(ctx context.Context) (string, error) {
+	return c.getToken(ctx)
 }
 
 // SetAccessToken seeds the token cache with a pre-obtained access token and

@@ -9,6 +9,7 @@
 - [Aggregations](./aggregations.md) — typed aggregation results.
 - [Extension manager](./extensions.md) — `/_action/extension/*` helpers (sub-package).
 - [Media](./media.md) — uploads (file / URL) and media folders (sub-package).
+- [Instance](./instance.md) — shop-wide actions such as clearing the cache (sub-package).
 - [Token storage](./token-storage.md) — in-memory, file, and no-op backends, scoping, custom stores.
 - [Custom HTTP client & headers](./http-client.md) — transports, global headers.
 - [Error handling](./error-handling.md) — `APIError`, the 401 retry.

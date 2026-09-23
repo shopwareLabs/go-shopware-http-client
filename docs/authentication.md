@@ -10,6 +10,10 @@ The client authenticates lazily on the first request, caches the token, and
 refreshes it transparently — you never manage tokens by hand. Call
 `client.Authenticate(ctx)` if you want to verify the credentials up front.
 
+When you need the raw bearer token for something outside the client (e.g.
+handing it to `curl`), `client.AccessToken(ctx)` returns a valid one, fetching
+or refreshing it as needed.
+
 ## Integration (client credentials)
 
 Use this for server-to-server access with an API integration's ID and secret.

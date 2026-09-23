@@ -44,6 +44,19 @@ resp.Headers         // http.Header
 resp.JSON(&target)   // unmarshal helper
 ```
 
+## Shop info
+
+The shop info endpoint has a typed helper on the client:
+
+```go
+info, err := client.Info(ctx)   // GET /_info/config, cached per Client
+info.Version                    // "6.7.1.0" (also via client.Version(ctx))
+info.HasBundle("Storefront")
+```
+
+Operations on the shop as a whole live in the
+[`instance`](./instance.md) sub-package.
+
 ## See also
 
 - [Entities & repositories](./entities.md) — the typed layer over `/search`,
