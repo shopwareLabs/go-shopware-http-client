@@ -6,8 +6,9 @@
 A standalone Go client for the [Shopware](https://www.shopware.com/) Admin API,
 with a typed Data Abstraction Layer (DAL) on top.
 
-It is self-contained — it depends only on the standard library,
-`golang.org/x/sync/singleflight`, and `github.com/google/uuid`. Everything
+It is self-contained — outside the standard library (which provides the
+`uuid` package) it depends only on `golang.org/x/sync` and
+`github.com/shyim/go-version`. Everything
 application-specific (HTTP transport, instrumentation, SSRF protection, extra
 headers, token persistence) is **injected** rather than imported, so the package
 can be vendored or split into its own module without dragging the rest of an
