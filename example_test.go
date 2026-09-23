@@ -35,6 +35,27 @@ func ExampleNewClient_password() {
 	})
 }
 
+func ExampleNewClient_fileTokenStorage() {
+	dir, err := shopware.DefaultFileTokenStorageDir()
+	if err != nil {
+		return
+	}
+	store, err := shopware.NewFileTokenStorage(dir)
+	if err != nil {
+		return
+	}
+
+	shopURL := "https://my-shop.example.com"
+	_ = shopware.NewClient(shopware.Config{
+		BaseURL:      shopURL,
+		ClientID:     "CLIENT_ID",
+		ClientSecret: "CLIENT_SECRET",
+		// Scope by shop so one shared directory stays correct if the same
+		// principal is ever used against multiple shops.
+		TokenStorage: shopware.NewScopedTokenStorage(store, shopURL),
+	})
+}
+
 func ExampleNewClient_customHTTPClientAndStorage() {
 	_ = shopware.NewClient(shopware.Config{
 		BaseURL:      "https://my-shop.example.com",

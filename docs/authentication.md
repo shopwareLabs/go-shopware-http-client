@@ -110,6 +110,10 @@ if err := client.SetAccessToken(ctx, tokens.AccessToken, tokens.Expiry); err != 
 
 // The client now works like any other — it refreshes the token transparently
 // when it expires, and the refresh token is automatically rotated.
+//
+// Pair this with `NewFileTokenStorage` (see Token storage) so the access
+// token is also cached on disk across CLI runs — only the refresh token
+// itself still needs persisting (file or keychain) between logins.
 ```
 
 ### Refresh token rotation
